@@ -39,8 +39,9 @@ export function emailLayout({ title, preheader = "", content }: LayoutOptions): 
 
         <!-- Header -->
         <tr>
-          <td style="background:linear-gradient(135deg,#6A178C 0%,#8B2FB5 100%);padding:36px 32px;text-align:center;">
-            <img src="https://mentesanapsicologia.com/images/logo.webp" alt="Mente Sana Psicología" width="140" style="height:auto;display:inline-block;filter:brightness(0) invert(1);">
+          <td style="background:linear-gradient(135deg,#6A178C 0%,#8B2FB5 100%);padding:40px 32px;text-align:center;">
+            <p style="margin:0 0 4px;font-family:'Caveat',cursive;font-size:20px;color:#ffffff;opacity:0.75;line-height:1;">mente sana</p>
+            <h2 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:32px;font-weight:500;color:#ffffff;letter-spacing:-0.5px;line-height:1.1;">Psicología</h2>
           </td>
         </tr>
 
