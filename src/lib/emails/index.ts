@@ -4,3 +4,4 @@ export { paymentConfirmationEmail } from "./payment-confirmation";
 export { contactReceivedEmail } from "./contact-received";
 export { sessionReminderEmail } from "./session-reminder";
 export { testCompletedEmail } from "./test-completed";
+export { ebookDeliveryEmail } from "./ebook-delivery";
