@@ -3,18 +3,24 @@
  * Requires BREVO_API_KEY env var.
  */
 
+interface Attachment {
+  name: string;
+  content: string; // base64
+}
+
 interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
   toName?: string;
   replyTo?: string;
+  attachments?: Attachment[];
 }
 
 const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "hola@mentesanapsicologia.com";
 const SENDER_NAME = process.env.BREVO_SENDER_NAME || "Mente Sana Psicología";
 
-export async function sendEmail({ to, subject, html, toName, replyTo }: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
+export async function sendEmail({ to, subject, html, toName, replyTo, attachments }: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
     console.warn("[email] BREVO_API_KEY not set — skipping send");
@@ -35,6 +41,7 @@ export async function sendEmail({ to, subject, html, toName, replyTo }: SendEmai
         subject,
         htmlContent: html,
         replyTo: replyTo ? { email: replyTo } : undefined,
+        attachment: attachments && attachments.length > 0 ? attachments : undefined,
       }),
     });
 
