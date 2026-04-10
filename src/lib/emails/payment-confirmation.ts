@@ -45,67 +45,12 @@ export function paymentConfirmationEmail({ name = "", amount = "9,99 €", psych
         </table>
 
         <!-- What's included -->
-        <p style="margin:32px 0 16px;font-size:13px;font-weight:700;color:#6A178C;text-transform:uppercase;letter-spacing:1px;text-align:center;">Tu pago incluye</p>
-
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f8f5ff;border-radius:16px;margin:24px 0;">
           <tr>
-            <td style="padding:14px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <tr>
-                  <td width="32" valign="top" style="font-size:20px;">🎥</td>
-                  <td><strong style="font-size:14px;">Sesión 1-a-1 de 50 minutos</strong><br><span style="font-size:12px;color:#1a0a1f;opacity:0.5;">Videollamada HD privada con tu psicóloga</span></td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:14px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <tr>
-                  <td width="32" valign="top" style="font-size:20px;">📋</td>
-                  <td><strong style="font-size:14px;">Informe personalizado</strong><br><span style="font-size:12px;color:#1a0a1f;opacity:0.5;">Análisis y recomendaciones específicas</span></td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:14px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <tr>
-                  <td width="32" valign="top" style="font-size:20px;">💬</td>
-                  <td><strong style="font-size:14px;">WhatsApp 24h con tu psicóloga</strong><br><span style="font-size:12px;color:#1a0a1f;opacity:0.5;">Seguimiento entre sesiones sin coste extra</span></td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:14px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <tr>
-                  <td width="32" valign="top" style="font-size:20px;">🤖</td>
-                  <td><strong style="font-size:14px;">Asistente IA emocional 24/7</strong><br><span style="font-size:12px;color:#1a0a1f;opacity:0.5;">Voz entrenada por psicólogos clínicos</span></td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:14px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <tr>
-                  <td width="32" valign="top" style="font-size:20px;">🧘</td>
-                  <td><strong style="font-size:14px;">+50 meditaciones guiadas</strong><br><span style="font-size:12px;color:#1a0a1f;opacity:0.5;">Para ansiedad, sueño y estrés</span></td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:14px 0;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <tr>
-                  <td width="32" valign="top" style="font-size:20px;">📚</td>
-                  <td><strong style="font-size:14px;">Audiolibros exclusivos</strong><br><span style="font-size:12px;color:#1a0a1f;opacity:0.5;">Biblioteca de sanación emocional</span></td>
-                </tr>
-              </table>
+            <td style="padding:24px;text-align:center;">
+              <p style="margin:0 0 4px;font-size:20px;">🎥</p>
+              <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#1a0a1f;">Sesión 1-a-1 de 50 minutos</p>
+              <p style="margin:0;font-size:13px;color:#1a0a1f;opacity:0.5;">Videollamada privada con tu psicóloga</p>
             </td>
           </tr>
         </table>
