@@ -3,11 +3,12 @@ import { emailLayout } from "./layout";
 interface Props {
   name?: string;
   psychologistName?: string;
+  email?: string;
 }
 
-export function diagnosticoPaidEmail({ name = "", psychologistName = "" }: Props): { subject: string; html: string } {
+export function diagnosticoPaidEmail({ name = "", psychologistName = "", email = "" }: Props): { subject: string; html: string } {
   const greeting = name ? `${name},` : "Hola,";
-  const testUrl = `https://mentesanapsicologia.com/test-mental-health?email=${encodeURIComponent(name ? "" : "")}&name=${encodeURIComponent(name)}`;
+  const testUrl = `https://mentesanapsicologia.com/test-mental-health?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`;
   const confirmUrl = "https://confrimacionregistro.vercel.app/";
 
   return {
