@@ -46,14 +46,14 @@ export function welcomeNewsletterEmail(): { subject: string; html: string } {
           <tr>
             <td align="center">
               <a href="https://mentesanapsicologia.com/test/sobrio" class="btn-purple" style="background:linear-gradient(135deg,#6A178C 0%,#8B2FB5 100%);color:#ffffff;text-decoration:none;padding:16px 36px;border-radius:999px;font-weight:700;display:inline-block;font-size:15px;">
-                Hacer test gratuito de salud mental
+                Recibir mi diagnóstico
               </a>
             </td>
           </tr>
         </table>
 
         <p style="margin:24px 0 0;font-size:12px;color:#1a0a1f;opacity:0.4;text-align:center;">
-          Mientras tanto, ¿quieres saber cómo está tu salud mental? Nuestro test gratuito de 3 minutos te da un informe personalizado.
+          Mientras tanto, ¿quieres saber cómo está tu salud mental? Nuestro diagnóstico de 2 minutos te da un informe clínico personalizado.
         </p>
       `,
     }),

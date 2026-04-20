@@ -47,7 +47,7 @@ export function testCompletedEmail({ name = "", topCategory = "", reportLink = "
           <tr>
             <td style="padding:28px;text-align:center;color:#ffffff;">
               <p style="margin:0 0 8px;font-family:'Caveat',cursive;font-size:22px;opacity:0.85;">Da el primer paso</p>
-              <p style="margin:0 0 6px;font-family:'Playfair Display',Georgia,serif;font-size:24px;line-height:1.3;">Primera sesión por solo 9,99 €</p>
+              <p style="margin:0 0 6px;font-family:'Playfair Display',Georgia,serif;font-size:24px;line-height:1.3;">Diagnóstico psicológico por 9,99 €</p>
               <p style="margin:0 0 20px;font-size:13px;opacity:0.7;line-height:1.5;">Conoce a tu psicóloga, cuéntale qué te pasa y decide si quieres continuar. Sin compromiso.</p>
               <a href="https://mentesanapsicologia.com/test/sobrio" style="background:#ffffff;color:#6A178C;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:700;display:inline-block;font-size:14px;">
                 Reservar mi sesión 9,99 €
