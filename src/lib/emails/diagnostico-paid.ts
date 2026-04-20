@@ -100,7 +100,7 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "" }: Props
               <div style="width:32px;height:32px;background:#f3e8ff;border-radius:50%;text-align:center;line-height:32px;font-weight:700;font-size:14px;color:#6A178C;">3</div>
             </td>
             <td style="padding-left:12px;vertical-align:top;">
-              <p style="margin:0 0 2px;font-size:15px;font-weight:600;color:#1a0a1f;">Sesión de lectura (50 min)</p>
+              <p style="margin:0 0 2px;font-size:15px;font-weight:600;color:#1a0a1f;">Sesión con tu psicóloga (50 min)</p>
               <p style="margin:0;font-size:13px;color:#1a0a1f;opacity:0.6;">En la videollamada, tu psicóloga te entrega el informe, te explica cada hallazgo y juntos construís un plan de acción.</p>
             </td>
           </tr>
