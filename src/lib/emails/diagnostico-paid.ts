@@ -36,7 +36,7 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "" }: Props
               <p style="margin:0 0 6px;font-size:13px;color:#ffffff;opacity:0.7;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Siguiente paso</p>
               <p style="margin:0 0 6px;font-family:'Playfair Display',Georgia,serif;font-size:26px;color:#ffffff;line-height:1.3;">Responde 5 preguntas</p>
               <p style="margin:0 0 20px;font-size:14px;color:#ffffff;opacity:0.7;">2 minutos · Nos ayuda a asignarte la psicóloga ideal y preparar tu informe</p>
-              <a href="https://mentesanapsicologia.com/test-mental-health" style="background:#ffffff;color:#6A178C;text-decoration:none;padding:16px 36px;border-radius:999px;font-weight:700;display:inline-block;font-size:15px;">
+              <a href="https://mentesanapsicologia.com/test-diagnostico" style="background:#ffffff;color:#6A178C;text-decoration:none;padding:16px 36px;border-radius:999px;font-weight:700;display:inline-block;font-size:15px;">
                 Completar mis 5 preguntas →
               </a>
             </td>
@@ -108,7 +108,7 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "" }: Props
             <td style="padding:24px;text-align:center;">
               <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#1a0a1f;">⏱ Solo te llevará 2 minutos</p>
               <p style="margin:0 0 16px;font-size:13px;color:#1a0a1f;opacity:0.6;">Cuanto antes respondas, antes tendrás tu sesión de lectura.</p>
-              <a href="https://mentesanapsicologia.com/test-mental-health" style="background:#6A178C;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:700;display:inline-block;font-size:14px;">
+              <a href="https://mentesanapsicologia.com/test-diagnostico" style="background:#6A178C;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:700;display:inline-block;font-size:14px;">
                 Empezar las 5 preguntas →
               </a>
             </td>
