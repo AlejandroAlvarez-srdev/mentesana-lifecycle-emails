@@ -1,7 +1,7 @@
 import { emailLayout } from "./layout";
 
 const APP_LANDING = "https://mentesanapsicologia.com/app";
-const PLAY_STORE = "https://play.google.com/apps/test/RQ8n4STdUPo/ahAO29uNSE9o0orDKNNhreru91RxZBP633w_YDN-L1KDWTbT3ybuUSlreTQWz3f4CjKs-ZIO2HoR-gKutjYXYDqKTC";
+const PLAY_STORE = "https://your-project.supabase.co/storage/v1/object/public/mentesana-app/mentesana-app.apk";
 
 interface Props {
   firstName?: string;
