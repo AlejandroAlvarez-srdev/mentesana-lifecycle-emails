@@ -67,16 +67,14 @@ export function appDownloadInvitationEmail({ firstName, email }: Props): { subje
               <!-- Store badges -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
                 <tr>
-                  <td style="padding:0 5px;">
-                    <a href="${PLAY_STORE}" style="background:#000;color:#fff !important;text-decoration:none;display:inline-block;padding:10px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);font-size:12px;font-weight:600;line-height:1.1;text-align:left;">
-                      <span style="font-size:9px;font-weight:400;display:block;opacity:0.8;">Disponible en</span>
-                      Google Play
+                  <td style="padding:0 6px;">
+                    <a href="${PLAY_STORE}" style="display:inline-block;text-decoration:none;">
+                      <img src="https://mentesanapsicologia.com/images/app/google-play-badge.png" alt="Disponible en Google Play" height="48" width="124" style="display:block;height:48px;width:auto;border:0;outline:none;text-decoration:none;">
                     </a>
                   </td>
-                  <td style="padding:0 5px;">
-                    <a href="${APP_LANDING}" style="background:#000;color:#fff !important;text-decoration:none;display:inline-block;padding:10px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);font-size:12px;font-weight:600;line-height:1.1;text-align:left;">
-                      <span style="font-size:9px;font-weight:400;display:block;opacity:0.8;">Próximamente</span>
-                      App Store
+                  <td style="padding:0 6px;">
+                    <a href="${APP_LANDING}" style="display:inline-block;text-decoration:none;">
+                      <img src="https://mentesanapsicologia.com/images/app/app-store-badge.png" alt="Próximamente en App Store" height="48" width="144" style="display:block;height:48px;width:auto;border:0;outline:none;text-decoration:none;">
                     </a>
                   </td>
                 </tr>

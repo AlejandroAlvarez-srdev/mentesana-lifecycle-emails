@@ -101,16 +101,14 @@ export function appDownloadReminderEmail({ firstName, email }: Props): { subject
             <td align="center">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                  <td style="padding:0 4px;">
-                    <a href="${PLAY_STORE}" style="background:#000;color:#fff !important;text-decoration:none;display:inline-block;padding:8px 14px;border-radius:10px;font-size:11px;font-weight:600;line-height:1.1;text-align:left;">
-                      <span style="font-size:8px;font-weight:400;display:block;opacity:0.85;">Disponible en</span>
-                      Google Play
+                  <td style="padding:0 5px;">
+                    <a href="${PLAY_STORE}" style="display:inline-block;text-decoration:none;">
+                      <img src="https://mentesanapsicologia.com/images/app/google-play-badge.png" alt="Disponible en Google Play" height="42" width="109" style="display:block;height:42px;width:auto;border:0;outline:none;text-decoration:none;">
                     </a>
                   </td>
-                  <td style="padding:0 4px;">
-                    <a href="${APP_LANDING}" style="background:#000;color:#fff !important;text-decoration:none;display:inline-block;padding:8px 14px;border-radius:10px;font-size:11px;font-weight:600;line-height:1.1;text-align:left;">
-                      <span style="font-size:8px;font-weight:400;display:block;opacity:0.85;">Próximamente</span>
-                      App Store
+                  <td style="padding:0 5px;">
+                    <a href="${APP_LANDING}" style="display:inline-block;text-decoration:none;">
+                      <img src="https://mentesanapsicologia.com/images/app/app-store-badge.png" alt="Próximamente en App Store" height="42" width="126" style="display:block;height:42px;width:auto;border:0;outline:none;text-decoration:none;">
                     </a>
                   </td>
                 </tr>
