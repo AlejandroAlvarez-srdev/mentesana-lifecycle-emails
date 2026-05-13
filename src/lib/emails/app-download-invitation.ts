@@ -67,14 +67,14 @@ export function appDownloadInvitationEmail({ firstName, email }: Props): { subje
               <!-- Store badges -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
                 <tr>
-                  <td style="padding:0 6px;">
+                  <td valign="middle" style="padding:0 6px;">
                     <a href="${PLAY_STORE}" style="display:inline-block;text-decoration:none;">
-                      <img src="https://mentesanapsicologia.com/images/app/google-play-badge.png" alt="Disponible en Google Play" height="48" width="124" style="display:block;height:48px;width:auto;border:0;outline:none;text-decoration:none;">
+                      <img src="https://mentesanapsicologia.com/images/app/google-play-badge.png" alt="Disponible en Google Play" width="140" height="54" style="display:block;width:140px;height:54px;border:0;outline:none;text-decoration:none;">
                     </a>
                   </td>
-                  <td style="padding:0 6px;">
+                  <td valign="middle" style="padding:0 6px;">
                     <a href="${APP_LANDING}" style="display:inline-block;text-decoration:none;">
-                      <img src="https://mentesanapsicologia.com/images/app/app-store-badge.png" alt="Próximamente en App Store" height="48" width="144" style="display:block;height:48px;width:auto;border:0;outline:none;text-decoration:none;">
+                      <img src="https://mentesanapsicologia.com/images/app/app-store-badge.png" alt="Próximamente en App Store" width="140" height="47" style="display:block;width:140px;height:47px;border:0;outline:none;text-decoration:none;">
                     </a>
                   </td>
                 </tr>

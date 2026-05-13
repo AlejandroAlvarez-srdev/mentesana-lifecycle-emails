@@ -176,14 +176,14 @@ export function appFeatureMariaEmail({ firstName, email }: Props): { subject: st
             <td align="center">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                  <td style="padding:0 5px;">
+                  <td valign="middle" style="padding:0 5px;">
                     <a href="${PLAY_STORE}" style="display:inline-block;text-decoration:none;">
-                      <img src="https://mentesanapsicologia.com/images/app/google-play-badge.png" alt="Disponible en Google Play" height="42" width="109" style="display:block;height:42px;width:auto;border:0;outline:none;text-decoration:none;">
+                      <img src="https://mentesanapsicologia.com/images/app/google-play-badge.png" alt="Disponible en Google Play" width="124" height="48" style="display:block;width:124px;height:48px;border:0;outline:none;text-decoration:none;">
                     </a>
                   </td>
-                  <td style="padding:0 5px;">
+                  <td valign="middle" style="padding:0 5px;">
                     <a href="${APP_LANDING}" style="display:inline-block;text-decoration:none;">
-                      <img src="https://mentesanapsicologia.com/images/app/app-store-badge.png" alt="Próximamente en App Store" height="42" width="126" style="display:block;height:42px;width:auto;border:0;outline:none;text-decoration:none;">
+                      <img src="https://mentesanapsicologia.com/images/app/app-store-badge.png" alt="Próximamente en App Store" width="124" height="41" style="display:block;width:124px;height:41px;border:0;outline:none;text-decoration:none;">
                     </a>
                   </td>
                 </tr>
