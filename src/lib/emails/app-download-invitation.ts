@@ -9,93 +9,73 @@ interface Props {
   email: string;
 }
 
+interface Feature {
+  emoji: string;
+  title: string;
+  body: string;
+}
+
+const FEATURES: Feature[] = [
+  { emoji: "🎥", title: "Sesiones con tu psicóloga", body: "Reserva, mueve o cancela la videoconsulta en dos toques. Consulta tus bonos y citas." },
+  { emoji: "💬", title: "Asistente María 24/7", body: "Chat o voz cuando necesites. Si requieres atención clínica, te deriva a una profesional humana." },
+  { emoji: "📔", title: "Diario emocional", body: "7 emociones, notas, fotos y una gráfica semanal con tu evolución." },
+  { emoji: "🎧", title: "Audiolibros de psicología", body: "Walter Riso, Robin Sharma, Carnegie y nuevos títulos cada mes. Velocidad ajustable." },
+  { emoji: "🧘", title: "Meditaciones guiadas", body: "Categorías: ansiedad, sueño, autoestima, mindfulness. Estilo Spotify, progreso guardado." },
+  { emoji: "🎓", title: "12 cursos en video", body: "123 lecciones de Antonella, Gabriela y Marlen. Dependencia emocional, ansiedad, autoestima y más." },
+  { emoji: "👥", title: "Talleres en directo", body: "Sesiones grupales por videollamada incluidas en tu Bono. Plaza limitada." },
+  { emoji: "🎁", title: "Comparte y Gana", body: "Tu código de referido te da créditos cada vez que un amigo contrata su primer Bono." },
+];
+
 export function appDownloadInvitationEmail({ firstName, email }: Props): { subject: string; html: string } {
-  const hi = firstName ? firstName : "hola";
+  const hi = firstName || "hola";
+  const featureRows = pairs(FEATURES).map((row) => `
+    <tr>
+      ${row.map((f) => f ? `
+        <td valign="top" width="50%" style="padding:6px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#FFFAF2;border:1px solid rgba(106,23,140,0.10);border-radius:14px;">
+            <tr><td style="padding:16px;">
+              <p style="margin:0 0 6px;font-size:20px;line-height:1;">${f.emoji}</p>
+              <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1a0a1f;line-height:1.3;">${f.title}</p>
+              <p style="margin:0;font-size:12px;color:#1a0a1f;opacity:0.62;line-height:1.5;">${f.body}</p>
+            </td></tr>
+          </table>
+        </td>
+      ` : `<td width="50%" style="padding:6px;"></td>`).join("")}
+    </tr>
+  `).join("");
+
   return {
     subject: firstName
       ? `${firstName}, tu Mente Sana ahora cabe en el bolsillo`
       : "Tu Mente Sana ahora cabe en el bolsillo",
     html: emailLayout({
       title: "Descarga la app de Mente Sana",
-      preheader: "Sesiones, María, diario, audiolibros y meditaciones — con tus mismas credenciales del CRM.",
+      preheader: "Sesiones, María, diario, audiolibros, meditaciones, cursos y talleres — con tu mismo email y contraseña del CRM.",
       content: `
-        <p style="margin:0 0 8px;font-family:'Caveat',cursive;font-size:22px;color:#6A178C;text-align:center;">Una buena noticia</p>
-        <h1 style="margin:0 0 16px;font-family:'Playfair Display',Georgia,serif;font-size:30px;line-height:1.2;color:#1a0a1f;text-align:center;font-weight:400;">${hi}, ya está aquí la app de Mente Sana</h1>
-
-        <p style="margin:0 0 18px;font-size:16px;line-height:1.7;color:#1a0a1f;opacity:0.75;">
-          Todo lo que ya usas con nosotros —tus sesiones, tu psicóloga, tus bonos— más herramientas nuevas pensadas para acompañarte cada día, ahora en tu móvil.
-        </p>
-
-        <!-- Feature blocks -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:24px 0 8px;">
+        <!-- ════════ HERO ════════ -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:-8px 0 24px;">
           <tr>
-            <td style="background:#FFFAF2;border:1px solid rgba(106,23,140,0.10);border-radius:16px;padding:18px;">
-              <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#6A178C;">Tus sesiones, siempre a mano</p>
-              <p style="margin:0;font-size:13px;color:#1a0a1f;opacity:0.65;line-height:1.55;">Reserva, mueve o cancela tu cita con tu psicóloga colegiada en dos toques.</p>
-            </td>
-          </tr>
-          <tr><td style="height:8px;line-height:8px;font-size:0;">&nbsp;</td></tr>
-          <tr>
-            <td style="background:#FFFAF2;border:1px solid rgba(106,23,140,0.10);border-radius:16px;padding:18px;">
-              <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#6A178C;">María, tu asistente emocional 24/7</p>
-              <p style="margin:0;font-size:13px;color:#1a0a1f;opacity:0.65;line-height:1.55;">Habla con María por chat o por voz cuando lo necesites. Si detecta que necesitas atención clínica, te deriva a una profesional humana.</p>
-            </td>
-          </tr>
-          <tr><td style="height:8px;line-height:8px;font-size:0;">&nbsp;</td></tr>
-          <tr>
-            <td style="background:#FFFAF2;border:1px solid rgba(106,23,140,0.10);border-radius:16px;padding:18px;">
-              <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#6A178C;">Diario emocional</p>
-              <p style="margin:0;font-size:13px;color:#1a0a1f;opacity:0.65;line-height:1.55;">Registra cómo te sientes y revisa tu evolución en una gráfica semanal.</p>
-            </td>
-          </tr>
-          <tr><td style="height:8px;line-height:8px;font-size:0;">&nbsp;</td></tr>
-          <tr>
-            <td style="background:#FFFAF2;border:1px solid rgba(106,23,140,0.10);border-radius:16px;padding:18px;">
-              <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#6A178C;">Audiolibros, meditaciones y cursos</p>
-              <p style="margin:0;font-size:13px;color:#1a0a1f;opacity:0.65;line-height:1.55;">Audiolibros de psicología práctica, meditaciones guiadas por categoría y 12 cursos en video impartidos por nuestras psicólogas.</p>
-            </td>
-          </tr>
-          <tr><td style="height:8px;line-height:8px;font-size:0;">&nbsp;</td></tr>
-          <tr>
-            <td style="background:#FFFAF2;border:1px solid rgba(106,23,140,0.10);border-radius:16px;padding:18px;">
-              <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#6A178C;">Talleres en directo incluidos en tu Bono</p>
-              <p style="margin:0;font-size:13px;color:#1a0a1f;opacity:0.65;line-height:1.55;">Reserva plaza en talleres grupales en vivo por videollamada con psicólogas expertas.</p>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Credentials block -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:28px 0;">
-          <tr>
-            <td style="background:linear-gradient(135deg,#FBF4E8 0%,#F0E3F7 100%);border:1px solid rgba(106,23,140,0.18);border-radius:18px;padding:22px;">
-              <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#6A178C;letter-spacing:0.06em;text-transform:uppercase;">Tus credenciales</p>
-              <p style="margin:0 0 10px;font-family:'Playfair Display',Georgia,serif;font-size:20px;color:#1a0a1f;line-height:1.3;">Usa el mismo email y contraseña del CRM</p>
-              <p style="margin:0 0 8px;font-size:14px;color:#1a0a1f;opacity:0.75;line-height:1.6;">
-                Entras en la app con <strong style="color:#6A178C;">${email}</strong> y la misma contraseña que ya tienes en tu CRM de Mente Sana.
+            <td align="center" style="background:linear-gradient(135deg,#1a0a1f 0%,#2d0d3f 50%,#4A2368 100%);border-radius:24px;padding:36px 28px;">
+              <p style="margin:0 0 4px;font-family:'Caveat',cursive;font-size:24px;color:#D7B8E3;line-height:1;">por fin está aquí</p>
+              <h1 style="margin:0 0 12px;font-family:'Playfair Display',Georgia,serif;font-size:32px;line-height:1.12;color:#ffffff;font-weight:500;letter-spacing:-0.5px;">
+                Tu Mente Sana<br>ahora cabe en<br><em style="color:#D7B8E3;font-style:italic;font-weight:400;">el bolsillo.</em>
+              </h1>
+              <p style="margin:0 0 18px;font-size:14px;color:#ffffff;opacity:0.72;line-height:1.55;max-width:380px;">
+                Tu psicóloga, María, tu diario, audiolibros, meditaciones, cursos y talleres — en una sola app.
               </p>
-              <p style="margin:0;font-size:14px;color:#1a0a1f;opacity:0.75;line-height:1.6;">
-                Si la cambias desde <em>Perfil → Cambiar contraseña</em> en la app, la nueva contraseña funcionará también en el CRM. Una sola cuenta para todo.
-              </p>
-            </td>
-          </tr>
-        </table>
 
-        <!-- Download buttons -->
-        <p style="margin:8px 0 14px;font-size:12px;color:#6A178C;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;text-align:center;">Descárgala ahora</p>
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 12px;">
-          <tr>
-            <td align="center">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+              <!-- Store badges -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
                 <tr>
-                  <td style="padding:0 6px;">
-                    <a href="${PLAY_STORE}" style="background:#000;color:#ffffff !important;text-decoration:none;display:inline-block;padding:10px 18px;border-radius:12px;font-size:13px;font-weight:600;line-height:1.1;">
-                      <span style="font-size:10px;font-weight:400;display:block;opacity:0.85;">Disponible en</span>
+                  <td style="padding:0 5px;">
+                    <a href="${PLAY_STORE}" style="background:#000;color:#fff !important;text-decoration:none;display:inline-block;padding:10px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);font-size:12px;font-weight:600;line-height:1.1;text-align:left;">
+                      <span style="font-size:9px;font-weight:400;display:block;opacity:0.8;">Disponible en</span>
                       Google Play
                     </a>
                   </td>
-                  <td style="padding:0 6px;">
-                    <a href="${APP_LANDING}" style="background:#000;color:#ffffff !important;text-decoration:none;display:inline-block;padding:10px 18px;border-radius:12px;font-size:13px;font-weight:600;line-height:1.1;">
-                      <span style="font-size:10px;font-weight:400;display:block;opacity:0.85;">Próximamente en</span>
+                  <td style="padding:0 5px;">
+                    <a href="${APP_LANDING}" style="background:#000;color:#fff !important;text-decoration:none;display:inline-block;padding:10px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);font-size:12px;font-weight:600;line-height:1.1;text-align:left;">
+                      <span style="font-size:9px;font-weight:400;display:block;opacity:0.8;">Próximamente</span>
                       App Store
                     </a>
                   </td>
@@ -104,32 +84,116 @@ export function appDownloadInvitationEmail({ firstName, email }: Props): { subje
             </td>
           </tr>
         </table>
-        <p style="margin:0 0 24px;font-size:12px;color:#1a0a1f;opacity:0.5;text-align:center;line-height:1.5;">
-          Android ya disponible. iOS llegará en los próximos días — apúntate al aviso desde el botón.
+
+        <!-- ════════ INTRO ════════ -->
+        <p style="margin:0 0 12px;font-family:'Playfair Display',Georgia,serif;font-size:22px;line-height:1.3;color:#1a0a1f;font-weight:400;letter-spacing:-0.3px;">
+          ${hi}, todo lo que ya tienes con nosotros — más herramientas nuevas para acompañarte cada día.
+        </p>
+        <p style="margin:0 0 28px;font-size:15px;line-height:1.7;color:#1a0a1f;opacity:0.7;">
+          Sin esperas. Donde estés. Cuando lo necesites.
         </p>
 
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:8px 0 24px;">
+        <!-- ════════ STATS STRIP ════════ -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 32px;">
           <tr>
-            <td align="center">
-              <a href="${APP_LANDING}" class="btn-purple" style="background:linear-gradient(135deg,#6A178C 0%,#8B2FB5 100%);color:#ffffff !important;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:700;display:inline-block;font-size:15px;">
-                Abrir página de la app
-              </a>
+            <td style="background:#FFFAF2;border:1px solid rgba(106,23,140,0.10);border-radius:16px;padding:18px 12px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  ${stat("150+", "psicólogas")}
+                  ${stat("8.000+", "pacientes")}
+                  ${stat("4,6/5", "valoración")}
+                  ${stat("24/7", "asistente")}
+                </tr>
+              </table>
             </td>
           </tr>
         </table>
 
-        <p style="margin:0 0 8px;font-size:13px;color:#1a0a1f;opacity:0.55;line-height:1.6;text-align:center;">
-          ¿No recuerdas tu contraseña? <a href="${CRM_LOGIN}" style="color:#6A178C;text-decoration:underline;">Restablécela desde el CRM</a> y entra en la app con la nueva.
+        <!-- ════════ FEATURES GRID 2x4 ════════ -->
+        <p style="margin:0 0 14px;font-family:'Caveat',cursive;font-size:22px;color:#6A178C;text-align:center;line-height:1;">qué encuentras dentro</p>
+        <h2 style="margin:0 0 18px;font-family:'Playfair Display',Georgia,serif;font-size:24px;line-height:1.25;color:#1a0a1f;text-align:center;font-weight:400;letter-spacing:-0.3px;">
+          Ocho herramientas, <em style="color:#6A178C;font-style:italic;">una sola app.</em>
+        </h2>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 -6px 28px;">
+          ${featureRows}
+        </table>
+
+        <!-- ════════ CREDENTIALS CALLOUT ════════ -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 32px;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#FBF4E8 0%,#F0E3F7 100%);border:1px solid rgba(106,23,140,0.22);border-radius:20px;padding:26px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td valign="top" style="width:48px;padding-right:14px;">
+                    <div style="width:40px;height:40px;background:#6A178C;border-radius:12px;color:#fff;font-size:22px;line-height:40px;text-align:center;">🔑</div>
+                  </td>
+                  <td valign="top">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#6A178C;letter-spacing:0.12em;text-transform:uppercase;">Una sola cuenta</p>
+                    <p style="margin:0 0 10px;font-family:'Playfair Display',Georgia,serif;font-size:22px;line-height:1.3;color:#1a0a1f;font-weight:400;letter-spacing:-0.2px;">
+                      Las mismas credenciales del CRM<br><em style="color:#6A178C;font-style:italic;">funcionan en la app.</em>
+                    </p>
+                    <p style="margin:0 0 8px;font-size:14px;color:#1a0a1f;opacity:0.78;line-height:1.6;">
+                      Email: <strong style="color:#6A178C;background:#fff;padding:2px 8px;border-radius:6px;border:1px solid rgba(106,23,140,0.15);">${email}</strong>
+                    </p>
+                    <p style="margin:0;font-size:13px;color:#1a0a1f;opacity:0.65;line-height:1.65;">
+                      Misma contraseña. Si la cambias desde <em>Perfil → Cambiar contraseña</em> en la app, la nueva funcionará también en el CRM.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- ════════ PRIMARY CTA ════════ -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 14px;">
+          <tr>
+            <td align="center">
+              <a href="${APP_LANDING}" style="background:linear-gradient(135deg,#6A178C 0%,#8B2FB5 100%);color:#ffffff !important;text-decoration:none;padding:17px 38px;border-radius:999px;font-weight:700;display:inline-block;font-size:16px;letter-spacing:0.1px;box-shadow:0 8px 30px rgba(106,23,140,0.28);">
+                Abrir la página de la app →
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:0 0 30px;font-size:12px;color:#1a0a1f;opacity:0.5;text-align:center;line-height:1.5;">
+          Android disponible ya. iOS aterriza esta semana — apúntate al aviso desde la página.
         </p>
 
-        <p style="margin:28px 0 6px;font-size:14px;color:#1a0a1f;opacity:0.75;line-height:1.7;">
-          Si tienes cualquier duda, escríbenos a <a href="mailto:hola@mentesanapsicologia.com" style="color:#6A178C;text-decoration:underline;">hola@mentesanapsicologia.com</a>. Estamos aquí para ti.
+        <!-- ════════ QUOTE / DIVIDER ════════ -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:8px 0 28px;">
+          <tr>
+            <td align="center" style="border-top:1px solid rgba(106,23,140,0.12);padding-top:24px;">
+              <p style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:20px;color:#6A178C;font-style:italic;line-height:1.4;letter-spacing:-0.2px;">
+                "Tu mente merece el mismo cuidado<br>que tu cuerpo."
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- ════════ FOOTER MICRO ════════ -->
+        <p style="margin:0 0 6px;font-size:13px;color:#1a0a1f;opacity:0.6;line-height:1.65;text-align:center;">
+          ¿No recuerdas tu contraseña? <a href="${CRM_LOGIN}" style="color:#6A178C;text-decoration:underline;">Restablécela aquí</a> y entra en la app con la nueva.
         </p>
-        <p style="margin:0;font-size:14px;color:#1a0a1f;opacity:0.75;line-height:1.7;">
-          Un abrazo,<br>
-          El equipo de Mente Sana
+        <p style="margin:0 0 28px;font-size:13px;color:#1a0a1f;opacity:0.6;line-height:1.65;text-align:center;">
+          ¿Una duda? <a href="mailto:hola@mentesanapsicologia.com" style="color:#6A178C;text-decoration:underline;">hola@mentesanapsicologia.com</a>
         </p>
+
+        <p style="margin:0;font-family:'Caveat',cursive;font-size:24px;color:#6A178C;text-align:center;line-height:1;">un abrazo,</p>
+        <p style="margin:6px 0 0;font-size:13px;color:#1a0a1f;opacity:0.55;text-align:center;">El equipo de Mente Sana</p>
       `,
     }),
   };
+}
+
+function pairs<T>(items: T[]): (T | null)[][] {
+  const out: (T | null)[][] = [];
+  for (let i = 0; i < items.length; i += 2) out.push([items[i], items[i + 1] ?? null]);
+  return out;
+}
+
+function stat(value: string, label: string) {
+  return `<td align="center" valign="middle" width="25%" style="padding:0 4px;">
+    <p style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:22px;line-height:1;color:#6A178C;font-weight:500;letter-spacing:-0.3px;">${value}</p>
+    <p style="margin:4px 0 0;font-size:10px;color:#1a0a1f;opacity:0.55;text-transform:uppercase;letter-spacing:0.08em;">${label}</p>
+  </td>`;
 }
