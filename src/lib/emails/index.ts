@@ -7,3 +7,6 @@ export { sessionReminderEmail } from "./session-reminder";
 export { testCompletedEmail } from "./test-completed";
 export { ebookDeliveryEmail } from "./ebook-delivery";
 export { reportDeliveryEmail } from "./report-delivery";
+export { appDownloadInvitationEmail } from "./app-download-invitation";
+export { appDownloadReminderEmail } from "./app-download-reminder";
+export { appFeatureMariaEmail } from "./app-feature-maria";
