@@ -121,6 +121,15 @@ export function appFeatureMariaEmail({ firstName, email }: Props): { subject: st
           </tr>
         </table>
 
+        <!-- ════════ POSTER PREVIEW ════════ -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 28px;">
+          <tr>
+            <td align="center">
+              <img src="https://mentesanapsicologia.com/images/app/poster-psicologa.jpg" width="360" alt="Mente Sana app — tu psicóloga asignada, no estás sola" style="display:block;width:100%;max-width:360px;height:auto;border:0;outline:none;text-decoration:none;border-radius:20px;">
+            </td>
+          </tr>
+        </table>
+
         <!-- ════════ STARTERS ════════ -->
         <p style="margin:0 0 14px;font-family:'Caveat',cursive;font-size:22px;color:#6A178C;text-align:center;line-height:1;">por dónde empezar</p>
         <h3 style="margin:0 0 16px;font-family:'Playfair Display',Georgia,serif;font-size:20px;line-height:1.3;color:#1a0a1f;text-align:center;font-weight:400;letter-spacing:-0.2px;">

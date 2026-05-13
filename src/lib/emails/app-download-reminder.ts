@@ -40,6 +40,15 @@ export function appDownloadReminderEmail({ firstName, email }: Props): { subject
           </tr>
         </table>
 
+        <!-- ════════ POSTER PREVIEW ════════ -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 28px;">
+          <tr>
+            <td align="center">
+              <img src="https://mentesanapsicologia.com/images/app/poster-herramientas.jpg" width="360" alt="Mente Sana app — herramientas que transforman tu día" style="display:block;width:100%;max-width:360px;height:auto;border:0;outline:none;text-decoration:none;border-radius:20px;">
+            </td>
+          </tr>
+        </table>
+
         <!-- ════════ NUMBERED STEPS ════════ -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 28px;">
           ${STEPS.map((s) => `

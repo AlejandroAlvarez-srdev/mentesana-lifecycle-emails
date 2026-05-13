@@ -85,6 +85,15 @@ export function appDownloadInvitationEmail({ firstName, email }: Props): { subje
           </tr>
         </table>
 
+        <!-- ════════ POSTER PREVIEW ════════ -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 28px;">
+          <tr>
+            <td align="center">
+              <img src="https://mentesanapsicologia.com/images/app/poster-bienestar.jpg" width="360" alt="Mente Sana app — tu bienestar en un solo lugar" style="display:block;width:100%;max-width:360px;height:auto;border:0;outline:none;text-decoration:none;border-radius:20px;">
+            </td>
+          </tr>
+        </table>
+
         <!-- ════════ INTRO ════════ -->
         <p style="margin:0 0 12px;font-family:'Playfair Display',Georgia,serif;font-size:22px;line-height:1.3;color:#1a0a1f;font-weight:400;letter-spacing:-0.3px;">
           ${hi}, todo lo que ya tienes con nosotros — más herramientas nuevas para acompañarte cada día.
