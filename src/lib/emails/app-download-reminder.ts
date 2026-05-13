@@ -89,7 +89,7 @@ export function appDownloadReminderEmail({ firstName, email }: Props): { subject
           <tr>
             <td align="center">
               <a href="${APP_LANDING}" style="background:linear-gradient(135deg,#6A178C 0%,#8B2FB5 100%);color:#ffffff !important;text-decoration:none;padding:16px 36px;border-radius:999px;font-weight:700;display:inline-block;font-size:15px;letter-spacing:0.1px;box-shadow:0 8px 28px rgba(106,23,140,0.28);">
-                Empezar ahora →
+                Descarga la app gratis →
               </a>
             </td>
           </tr>
