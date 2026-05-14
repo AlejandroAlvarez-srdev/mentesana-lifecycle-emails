@@ -1,7 +1,7 @@
 import { emailLayout } from "./layout";
 
 const APP_LANDING = "https://mentesanapsicologia.com/app";
-const PLAY_STORE = "https://your-project.supabase.co/storage/v1/object/public/mentesana-app/mentesana-app.apk";
+const PLAY_STORE = "https://mentesanapsicologia.com/api/descargar-apk?source=email-invitation";
 const CRM_LOGIN = "https://crm.mentesanapsicologia.com/login";
 
 interface Props {
