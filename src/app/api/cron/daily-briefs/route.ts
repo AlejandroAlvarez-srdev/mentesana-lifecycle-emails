@@ -165,7 +165,7 @@ async function generateAngles(): Promise<string[]> {
 
   let convosContext = "";
   try {
-    const { data: convos } = await ameliaQuery<any>(`SELECT info FROM ${ameliaTable("customer_bookings")} WHERE info IS NOT NULL AND CHAR_LENGTH(info) > 20 ORDER BY created DESC LIMIT 30`).catch(() => []);
+    const convos = await ameliaQuery<any>(`SELECT info FROM ${ameliaTable("customer_bookings")} WHERE info IS NOT NULL AND CHAR_LENGTH(info) > 20 ORDER BY created DESC LIMIT 30`).catch(() => [] as any[]);
     convosContext = (convos ?? []).map((c: any) => String(c.info ?? "").slice(0, 150)).join(" | ").slice(0, 1500);
   } catch {}
 
