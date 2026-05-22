@@ -64,6 +64,28 @@ export async function GET(req: NextRequest) {
           body.phones = row.phones;
           body.components = row.components ?? [];
         }
+        // PRE-FLIGHT: ensure-conversation por cada phone (Edge Function broadcast solo
+        // guarda msg en messages_mentesana si la conv YA existe; sin esto el mensaje
+        // se entrega a Meta pero desaparece del CRM).
+        const phonesToEnsure: string[] = Array.isArray(body.recipients)
+          ? body.recipients.map((r: any) => String(r.phone ?? "").trim()).filter(Boolean)
+          : Array.isArray(body.phones) ? body.phones : [];
+        for (const phone of phonesToEnsure) {
+          try {
+            const exists = await sb.from("conversations_mentesana").select("id").eq("phone", phone).limit(1).maybeSingle();
+            if (!exists.data) {
+              const newId = `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+              await sb.from("conversations_mentesana").insert({
+                id: newId, phone,
+                status: "sin_contactar",
+                client_type: "ventas",
+                pipeline_type: "ventas",
+                source: "manual",
+                notes: `Creada por scheduler al enviar plantilla programada (cron)`,
+              });
+            }
+          } catch (e) { console.warn("[scheduler] ensure-conv fail for", phone, e); }
+        }
       }
 
       const r = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
