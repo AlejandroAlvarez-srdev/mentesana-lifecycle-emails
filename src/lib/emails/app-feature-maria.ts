@@ -1,7 +1,7 @@
 import { emailLayout } from "./layout";
 
 const APP_LANDING = "https://mentesanapsicologia.com/app";
-const PLAY_STORE = "https://mentesanapsicologia.com/api/descargar-apk?source=email-feature-maria";
+const PLAY_STORE = "https://play.google.com/store/apps/details?id=com.mentesanapsicologia.com&hl=es_CO";
 
 interface Props {
   firstName?: string;
