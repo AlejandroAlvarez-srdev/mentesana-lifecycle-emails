@@ -37,11 +37,19 @@ export function emailLayout({ title, preheader = "", content }: LayoutOptions): 
     <td align="center" style="padding:32px 16px;">
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 8px 40px rgba(106,23,140,0.06);border:1px solid rgba(0,0,0,0.04);">
 
-        <!-- Header -->
+        <!-- Header — logo oficial Mente Sana sobre fondo blanco, compacto -->
         <tr>
-          <td style="background:linear-gradient(135deg,#6A178C 0%,#8B2FB5 100%);padding:40px 32px;text-align:center;">
-            <p style="margin:0 0 4px;font-family:'Caveat',cursive;font-size:20px;color:#ffffff;opacity:0.75;line-height:1;">mente sana</p>
-            <h2 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:32px;font-weight:500;color:#ffffff;letter-spacing:-0.5px;line-height:1.1;">Psicología</h2>
+          <td style="background:#ffffff;padding:22px 32px 16px;text-align:center;border-bottom:1px solid rgba(106,23,140,0.08);">
+            <a href="https://mentesanapsicologia.com" target="_blank" style="text-decoration:none;display:inline-block;">
+              <img src="https://mentesanapsicologia.com/images/logo-email.png" alt="Mente Sana Psicología" width="160" height="37" style="display:block;width:160px;height:37px;border:0;outline:none;text-decoration:none;">
+            </a>
+            <p style="margin:8px 0 0;font-family:'Caveat',cursive;font-size:14px;color:#1a0a1f;opacity:0.55;line-height:1;">psicología online · con cariño</p>
+            <!-- Línea dorada decorativa -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:10px auto 0;">
+              <tr>
+                <td style="width:40px;height:2px;background:#D4AF37;border-radius:1px;line-height:2px;font-size:0;">&nbsp;</td>
+              </tr>
+            </table>
           </td>
         </tr>
 
