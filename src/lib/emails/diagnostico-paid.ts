@@ -7,12 +7,28 @@ interface Props {
   email?: string;
 }
 
-const APP_LANDING = "https://mentesanapsicologia.com/app";
-const PLAY_STORE = "https://play.google.com/store/apps/details?id=com.mentesanapsicologia.com&hl=es_CO";
+const APP_STORE_URL_BASE = "https://apps.apple.com/co/app/mente-sana-app/id6769225141";
+const PLAY_STORE_URL_BASE = "https://play.google.com/store/apps/details?id=com.mentesanapsicologia.com&hl=es_CO";
 const APP_STORE_BADGE = "https://mentesanapsicologia.com/images/app/app-store-badge.png";
-const PLAY_STORE_BADGE = "https://mentesanapsicologia.com/images/app/google-play-badge.png";
+// Versión 3:1 generada (750×250, padding transparente horizontal) para que
+// renderice al mismo tamaño exacto que el App Store badge sin deformarse.
+const PLAY_STORE_BADGE = "https://mentesanapsicologia.com/images/app/google-play-badge-3x1.png";
 const WA_PHONE_INTL = "+34 XXX XXX XXX";
 const WA_URL = "https://wa.me/34XXXXXXXXX";
+
+// UTM helpers — para saber desde qué placement del email entró cada usuario.
+// iOS: usamos `ct` (campaign token de Apple). Android: `referrer` con UTMs
+// estándar codificados (mecanismo oficial de Play Install Referrer).
+function appStoreUrl(placement: string): string {
+  const ct = `email_diagnostico_paid_${placement}`;
+  return `${APP_STORE_URL_BASE}?pt=mentesana&ct=${encodeURIComponent(ct)}&mt=8`;
+}
+function playStoreUrl(placement: string): string {
+  const referrer = encodeURIComponent(
+    `utm_source=email&utm_medium=transactional&utm_campaign=diagnostico_paid&utm_content=${placement}`,
+  );
+  return `${PLAY_STORE_URL_BASE}&referrer=${referrer}`;
+}
 
 // Foto de psicóloga: resuelta vía resolvePsiPhotoUrl() — sólo devuelve URL
 // si el slug existe en la whitelist de psi-photos.ts. Si no, retorna null
@@ -152,17 +168,17 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
                 Disponible para iPhone y Android · Gratis · Tu cuenta ya está creada con <strong>${email || "tu email"}</strong>
               </p>
 
-              <!-- Badges (alturas iguales · respeta el aspect ratio real de cada PNG) -->
+              <!-- Badges — mismo tamaño visual (igualados en alto y ancho) -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 18px;">
                 <tr>
                   <td style="padding:0 6px;vertical-align:middle;">
-                    <a href="${APP_LANDING}" target="_blank" style="text-decoration:none;display:inline-block;">
-                      <img src="${APP_STORE_BADGE}" alt="Descargar en App Store" width="148" height="49" style="display:block;width:148px;height:49px;border:0;outline:none;text-decoration:none;">
+                    <a href="${appStoreUrl("hero")}" target="_blank" style="text-decoration:none;display:inline-block;">
+                      <img src="${APP_STORE_BADGE}" alt="Descargar en App Store" width="150" height="50" style="display:block;width:150px;height:50px;border:0;outline:none;text-decoration:none;">
                     </a>
                   </td>
                   <td style="padding:0 6px;vertical-align:middle;">
-                    <a href="${PLAY_STORE}" target="_blank" style="text-decoration:none;display:inline-block;">
-                      <img src="${PLAY_STORE_BADGE}" alt="Disponible en Google Play" width="127" height="49" style="display:block;width:127px;height:49px;border:0;outline:none;text-decoration:none;">
+                    <a href="${playStoreUrl("hero")}" target="_blank" style="text-decoration:none;display:inline-block;">
+                      <img src="${PLAY_STORE_BADGE}" alt="Disponible en Google Play" width="150" height="50" style="display:block;width:150px;height:50px;border:0;outline:none;text-decoration:none;">
                     </a>
                   </td>
                 </tr>
@@ -197,7 +213,7 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
           <tr>
             <!-- 1 · Bienestar -->
             <td style="width:33.33%;padding:0 4px;vertical-align:top;text-align:center;">
-              <a href="${APP_LANDING}" target="_blank" style="text-decoration:none;">
+              <a href="${appStoreUrl("body_cta")}" target="_blank" style="text-decoration:none;">
                 <img src="https://mentesanapsicologia.com/images/app/poster-bienestar.jpg" alt="Bienestar diario en la app" width="160" height="284" style="display:block;width:100%;max-width:170px;height:auto;border:0;outline:none;border-radius:14px;margin:0 auto 10px;box-shadow:0 12px 24px rgba(106,23,140,0.18);">
               </a>
               <p style="margin:0 0 2px;font-family:'Playfair Display',Georgia,serif;font-size:14px;color:#1a0a1f;line-height:1.2;font-weight:500;letter-spacing:-0.01em;">1 · Tu bienestar</p>
@@ -205,7 +221,7 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
             </td>
             <!-- 2 · Herramientas -->
             <td style="width:33.33%;padding:0 4px;vertical-align:top;text-align:center;">
-              <a href="${APP_LANDING}" target="_blank" style="text-decoration:none;">
+              <a href="${appStoreUrl("body_cta")}" target="_blank" style="text-decoration:none;">
                 <img src="https://mentesanapsicologia.com/images/app/poster-herramientas.jpg" alt="Herramientas de la app" width="160" height="284" style="display:block;width:100%;max-width:170px;height:auto;border:0;outline:none;border-radius:14px;margin:0 auto 10px;box-shadow:0 12px 24px rgba(106,23,140,0.18);">
               </a>
               <p style="margin:0 0 2px;font-family:'Playfair Display',Georgia,serif;font-size:14px;color:#1a0a1f;line-height:1.2;font-weight:500;letter-spacing:-0.01em;">2 · Tus herramientas</p>
@@ -213,7 +229,7 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
             </td>
             <!-- 3 · Psicóloga -->
             <td style="width:33.33%;padding:0 4px;vertical-align:top;text-align:center;">
-              <a href="${APP_LANDING}" target="_blank" style="text-decoration:none;">
+              <a href="${appStoreUrl("body_cta")}" target="_blank" style="text-decoration:none;">
                 <img src="https://mentesanapsicologia.com/images/app/poster-psicologa.jpg" alt="Tu psicóloga asignada en la app" width="160" height="284" style="display:block;width:100%;max-width:170px;height:auto;border:0;outline:none;border-radius:14px;margin:0 auto 10px;box-shadow:0 12px 24px rgba(106,23,140,0.18);">
               </a>
               <p style="margin:0 0 2px;font-family:'Playfair Display',Georgia,serif;font-size:14px;color:#1a0a1f;line-height:1.2;font-weight:500;letter-spacing:-0.01em;">3 · Tu psicóloga</p>
@@ -316,7 +332,7 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
                     <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:#1a0a1f;opacity:0.6;line-height:1.5;">Ver fecha, mover, cancelar o chatear con ${psiFirstName || "tu psicóloga"} — todo desde el móvil.</p>
                   </td>
                   <td align="right" style="vertical-align:middle;">
-                    <a href="${APP_LANDING}" style="background:${PURPLE};color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:999px;font-family:'Helvetica Neue',Arial,sans-serif;font-weight:700;display:inline-block;font-size:12px;white-space:nowrap;">
+                    <a href="${appStoreUrl("body_cta")}" style="background:${PURPLE};color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:999px;font-family:'Helvetica Neue',Arial,sans-serif;font-weight:700;display:inline-block;font-size:12px;white-space:nowrap;">
                       Abrir la app →
                     </a>
                   </td>
@@ -338,16 +354,16 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
               <p style="margin:0 0 18px;font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:400;color:#fff;line-height:1.3;letter-spacing:-0.01em;">
                 Sin la app, tu psicóloga no recibe<br>tu evaluación a tiempo.
               </p>
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
                 <tr>
                   <td style="padding:0 5px;vertical-align:middle;">
-                    <a href="${APP_LANDING}" target="_blank" style="text-decoration:none;display:inline-block;">
-                      <img src="${APP_STORE_BADGE}" alt="App Store" width="130" height="43" style="display:block;width:130px;height:43px;border:0;outline:none;">
+                    <a href="${appStoreUrl("reminder")}" target="_blank" style="text-decoration:none;display:inline-block;">
+                      <img src="${APP_STORE_BADGE}" alt="App Store" width="135" height="45" style="display:block;width:135px;height:45px;border:0;outline:none;">
                     </a>
                   </td>
                   <td style="padding:0 5px;vertical-align:middle;">
-                    <a href="${PLAY_STORE}" target="_blank" style="text-decoration:none;display:inline-block;">
-                      <img src="${PLAY_STORE_BADGE}" alt="Google Play" width="111" height="43" style="display:block;width:111px;height:43px;border:0;outline:none;">
+                    <a href="${playStoreUrl("reminder")}" target="_blank" style="text-decoration:none;display:inline-block;">
+                      <img src="${PLAY_STORE_BADGE}" alt="Google Play" width="135" height="45" style="display:block;width:135px;height:45px;border:0;outline:none;">
                     </a>
                   </td>
                 </tr>
@@ -372,18 +388,24 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 18px;">
           <tr>
             <td align="center" style="text-align:center;">
-              <p style="margin:0 0 8px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:#1a0a1f;opacity:0.7;line-height:1.55;">
+              <p style="margin:0 0 10px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:#1a0a1f;opacity:0.7;line-height:1.55;">
                 ¿Te ha surgido alguna duda al instalar la app?
               </p>
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
+              <!--[if mso]>
+                <center>
+              <![endif]-->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;border-collapse:separate;">
                 <tr>
-                  <td align="center" style="background:#ffffff;border:1px solid ${PURPLE}33;border-radius:999px;">
-                    <a href="${WA_URL}?text=Hola%2C%20he%20pagado%20el%20diagn%C3%B3stico%20y%20necesito%20ayuda%20con%20la%20app" style="display:inline-block;padding:10px 18px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;font-weight:700;color:${PURPLE};text-decoration:none;line-height:1;">
+                  <td style="background:#ffffff;border:1px solid ${PURPLE}33;border-radius:999px;padding:10px 20px;text-align:center;">
+                    <a href="${WA_URL}?text=Hola%2C%20he%20pagado%20el%20diagn%C3%B3stico%20y%20necesito%20ayuda%20con%20la%20app" style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;font-weight:700;color:${PURPLE};text-decoration:none;line-height:1;white-space:nowrap;">
                       💬 Escríbenos por WhatsApp · ${WA_PHONE_INTL}
                     </a>
                   </td>
                 </tr>
               </table>
+              <!--[if mso]>
+                </center>
+              <![endif]-->
             </td>
           </tr>
         </table>
