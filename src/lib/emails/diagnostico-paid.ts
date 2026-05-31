@@ -165,7 +165,7 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
                 Mente Sana · Tu psicología
               </h3>
               <p style="margin:0 0 22px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13.5px;color:#1a0a1f;opacity:0.6;line-height:1.55;">
-                Disponible para iPhone y Android · Gratis · Tu cuenta ya está creada con <strong>${email || "tu email"}</strong>
+                Disponible para iPhone y Android · Gratis · Tu cuenta ya está creada
               </p>
 
               <!-- Badges — mismo tamaño visual (igualados en alto y ancho) -->
@@ -184,8 +184,35 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
                 </tr>
               </table>
 
-              <p style="margin:6px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#1a0a1f;opacity:0.5;letter-spacing:0.5px;">
-                ⏱ Te lleva 30 segundos · Inicia sesión con <strong>${email || "tu email"}</strong>
+              <!-- Credenciales — destacadas para copiar fácil -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100% !important;margin:8px 0 0;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;border-collapse:separate;background:#ffffff;border:1.5px dashed ${PURPLE}55;border-radius:14px;">
+                      <tr>
+                        <td style="padding:14px 18px;text-align:left;">
+                          <p style="margin:0 0 6px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10.5px;color:${PURPLE};font-weight:700;letter-spacing:1.4px;text-transform:uppercase;">
+                            🔑 Tus credenciales de acceso
+                          </p>
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0;">
+                            <tr>
+                              <td style="padding:4px 12px 4px 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#1a0a1f;opacity:0.55;font-weight:600;white-space:nowrap;">Email</td>
+                              <td style="padding:4px 0;font-family:'Menlo','Courier New',monospace;font-size:12.5px;color:#1a0a1f;font-weight:600;">${email || "(el email con el que pagaste)"}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding:4px 12px 4px 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#1a0a1f;opacity:0.55;font-weight:600;white-space:nowrap;">Contraseña</td>
+                              <td style="padding:4px 0;font-family:'Menlo','Courier New',monospace;font-size:12.5px;color:#1a0a1f;font-weight:600;">REDACTED_PASSWORD</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:10px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#1a0a1f;opacity:0.55;line-height:1.5;text-align:center;">
+                ⏱ Te lleva 30 segundos · Podrás cambiar la contraseña dentro de la app
               </p>
 
             </td>
@@ -343,31 +370,33 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
         </table>
 
         <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- RECORDATORIO FINAL — descarga ya                             -->
+        <!-- RECORDATORIO FINAL — descarga ya · bulletproof centrado     -->
         <!-- ═══════════════════════════════════════════════════════════ -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:linear-gradient(135deg,${PURPLE_DEEP} 0%,${PURPLE} 100%);border-radius:20px;margin:0 0 28px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100% !important;margin:0 0 28px;border-collapse:separate;">
           <tr>
-            <td style="padding:26px 24px;text-align:center;">
-              <p style="margin:0 0 6px;font-family:'Caveat',cursive;font-size:22px;color:${GOLD};line-height:1;">
+            <td align="center" style="background:${PURPLE_DEEP};background:linear-gradient(135deg,${PURPLE_DEEP} 0%,${PURPLE} 100%);border-radius:20px;padding:28px 24px;text-align:center;">
+              <p style="margin:0 0 6px;font-family:'Caveat',cursive;font-size:22px;color:${GOLD};line-height:1;text-align:center;">
                 un último empujón
               </p>
-              <p style="margin:0 0 18px;font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:400;color:#fff;line-height:1.3;letter-spacing:-0.01em;">
+              <p style="margin:0 0 20px;font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:400;color:#ffffff;line-height:1.3;letter-spacing:-0.01em;text-align:center;">
                 Sin la app, tu psicóloga no recibe<br>tu evaluación a tiempo.
               </p>
+              <!--[if mso]><center><![endif]-->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
                 <tr>
-                  <td style="padding:0 5px;vertical-align:middle;">
+                  <td style="padding:0 5px;vertical-align:middle;font-size:0;line-height:0;">
                     <a href="${appStoreUrl("reminder")}" target="_blank" style="text-decoration:none;display:inline-block;">
                       <img src="${APP_STORE_BADGE}" alt="App Store" width="135" height="45" style="display:block;width:135px;height:45px;border:0;outline:none;">
                     </a>
                   </td>
-                  <td style="padding:0 5px;vertical-align:middle;">
+                  <td style="padding:0 5px;vertical-align:middle;font-size:0;line-height:0;">
                     <a href="${playStoreUrl("reminder")}" target="_blank" style="text-decoration:none;display:inline-block;">
                       <img src="${PLAY_STORE_BADGE}" alt="Google Play" width="135" height="45" style="display:block;width:135px;height:45px;border:0;outline:none;">
                     </a>
                   </td>
                 </tr>
               </table>
+              <!--[if mso]></center><![endif]-->
             </td>
           </tr>
         </table>
@@ -385,27 +414,23 @@ export function diagnosticoPaidEmail({ name = "", psychologistName = "", email =
           </tr>
         </table>
 
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 18px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100% !important;margin:0 0 18px;">
           <tr>
-            <td align="center" style="text-align:center;">
-              <p style="margin:0 0 10px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:#1a0a1f;opacity:0.7;line-height:1.55;">
+            <td align="center" style="text-align:center;padding:0;">
+              <p style="margin:0 0 12px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:#1a0a1f;opacity:0.7;line-height:1.55;text-align:center;">
                 ¿Te ha surgido alguna duda al instalar la app?
               </p>
-              <!--[if mso]>
-                <center>
-              <![endif]-->
+              <!--[if mso]><center><![endif]-->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;border-collapse:separate;">
                 <tr>
-                  <td style="background:#ffffff;border:1px solid ${PURPLE}33;border-radius:999px;padding:10px 20px;text-align:center;">
-                    <a href="${WA_URL}?text=Hola%2C%20he%20pagado%20el%20diagn%C3%B3stico%20y%20necesito%20ayuda%20con%20la%20app" style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;font-weight:700;color:${PURPLE};text-decoration:none;line-height:1;white-space:nowrap;">
+                  <td align="center" style="background:#ffffff;border:1.5px solid ${PURPLE};border-radius:999px;padding:0;text-align:center;">
+                    <a href="${WA_URL}?text=Hola%2C%20he%20pagado%20el%20diagn%C3%B3stico%20y%20necesito%20ayuda%20con%20la%20app" target="_blank" style="display:inline-block;padding:11px 22px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;font-weight:700;color:${PURPLE};text-decoration:none;line-height:1;white-space:nowrap;">
                       💬 Escríbenos por WhatsApp · ${WA_PHONE_INTL}
                     </a>
                   </td>
                 </tr>
               </table>
-              <!--[if mso]>
-                </center>
-              <![endif]-->
+              <!--[if mso]></center><![endif]-->
             </td>
           </tr>
         </table>
