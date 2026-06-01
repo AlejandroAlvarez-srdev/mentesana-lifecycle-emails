@@ -6,14 +6,13 @@ import { createClient } from "@supabase/supabase-js";
 import { ameliaQuery, ameliaTable } from "@/lib/amelia-db";
 import { sendEmail } from "@/lib/emails/send";
 import { emailLayout } from "@/lib/emails/layout";
+import { JEFE_EMAILS } from "@/lib/jefe-psi-auth";
 
 const sb = createClient(process.env.NEXT_PUBLIC_BLOG_SUPABASE_URL!, process.env.BLOG_SUPABASE_SERVICE_KEY!, { auth: { persistSession: false } });
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 120;
-
-const JEFE_EMAIL = "lead-psychologist@example.com";
 
 export async function GET(req: NextRequest) {
   const expected = process.env.CRON_SECRET;
@@ -169,11 +168,14 @@ export async function GET(req: NextRequest) {
     </div>
   `;
 
-  await sendEmail({
-    to: JEFE_EMAIL,
-    subject: `📊 Resumen semanal psicólogas · ${totalAttended} asistidas · ${totalHcPending} HC pendientes`,
-    html: emailLayout({ title: "Resumen semanal psicólogas", preheader: `${totalAttended} asistidas, ${totalHcPending} HC pendientes`, content }),
-  });
+  // A las dos líderes de psicólogas
+  for (const to of JEFE_EMAILS) {
+    await sendEmail({
+      to,
+      subject: `📊 Resumen semanal psicólogas · ${totalAttended} asistidas · ${totalHcPending} HC pendientes`,
+      html: emailLayout({ title: "Resumen semanal psicólogas", preheader: `${totalAttended} asistidas, ${totalHcPending} HC pendientes`, content }),
+    });
+  }
 
   return NextResponse.json({ ok: true, providers: enriched.length, total_attended: totalAttended, total_hc_pending: totalHcPending });
 }
