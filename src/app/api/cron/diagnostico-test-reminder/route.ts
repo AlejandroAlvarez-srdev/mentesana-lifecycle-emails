@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
   // Lookup en diagnostico_tests para esos emails: estado del test + flag de reminder
   const { data: tests } = await sb
     .from("diagnostico_tests")
-    .select("user_email, scores, report_generated, test_reminder_sent_at, test_mental_health_completed_at")
+    .select("user_email, scores, report_generated, test_reminder_sent_at, test_mental_health_completed_at, paid_at, created_at")
     .in("user_email", emails);
 
   const byEmail = new Map<string, {
@@ -83,6 +83,8 @@ export async function GET(req: NextRequest) {
     report_generated: boolean | null;
     test_reminder_sent_at: string | null;
     test_mental_health_completed_at: string | null;
+    paid_at: string | null;
+    created_at: string | null;
   }>();
   for (const t of tests ?? []) {
     byEmail.set((t.user_email as string).toLowerCase(), {
@@ -90,10 +92,18 @@ export async function GET(req: NextRequest) {
       report_generated: t.report_generated as boolean | null,
       test_reminder_sent_at: t.test_reminder_sent_at as string | null,
       test_mental_health_completed_at: t.test_mental_health_completed_at as string | null,
+      paid_at: t.paid_at as string | null,
+      created_at: t.created_at as string | null,
     });
   }
 
-  let sent = 0, skippedAlreadySent = 0, skippedTestDone = 0, failed = 0;
+  // Gracia: si el paciente acaba de pagar / acaba de crearse la fila, le
+  // damos margen para terminar el test antes de mandarle un recordatorio
+  // que llegue mientras lo está rellenando.
+  const GRACE_MS = 45 * 60 * 1000;
+  const nowMs = Date.now();
+
+  let sent = 0, skippedAlreadySent = 0, skippedTestDone = 0, skippedGrace = 0, failed = 0;
 
   for (const c of candidates) {
     const email = (c.customer_email || "").toLowerCase();
@@ -107,6 +117,14 @@ export async function GET(req: NextRequest) {
 
     // 2) Si ya le mandamos el recordatorio no repetimos
     if (row?.test_reminder_sent_at) { skippedAlreadySent++; continue; }
+
+    // 3) Gracia post-pago: pagó/registró hace < 45 min → quizá esté
+    //    rellenando el test ahora mismo. Esperamos al siguiente ciclo.
+    const recentMs = Math.max(
+      row?.paid_at ? new Date(row.paid_at).getTime() : 0,
+      row?.created_at ? new Date(row.created_at).getTime() : 0,
+    );
+    if (recentMs && nowMs - recentMs < GRACE_MS) { skippedGrace++; continue; }
 
     const psiFull = `${c.provider_first ?? ""} ${c.provider_last ?? ""}`.trim();
     const { subject, html, fromName } = diagnosticoTestReminderEmail({
@@ -140,6 +158,7 @@ export async function GET(req: NextRequest) {
     sent,
     skipped_test_done: skippedTestDone,
     skipped_already_sent: skippedAlreadySent,
+    skipped_grace: skippedGrace,
     failed,
   });
 }
