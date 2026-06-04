@@ -1,5 +1,6 @@
 // Cron: dispara publish para drafts con scheduled_for vencido.
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { psyBlogSb, BLOG_TABLE, contentHash, publishIdempotencyKey, generateBlogHero, buildHeroPrompt } from "@/lib/psy-blog";
 
 export const runtime = "nodejs";
@@ -69,6 +70,9 @@ export async function GET(req: NextRequest) {
           lock_expires_at: null,
         }).eq("keyword", post.keyword);
       }
+
+      // Invalida cache Next/Vercel para que el post sea visible inmediatamente
+      try { revalidatePath(`/blog/${post.slug}`); revalidatePath("/blog"); } catch {}
 
       results.push({ id: post.id, ok: true });
     } catch (e) {
