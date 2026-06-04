@@ -1,7 +1,8 @@
 // Cron: dispara publish para drafts con scheduled_for vencido.
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { psyBlogSb, BLOG_TABLE, contentHash, publishIdempotencyKey, generateBlogHero, buildHeroPrompt } from "@/lib/psy-blog";
+import { psyBlogSb, BLOG_TABLE, contentHash, publishIdempotencyKey, generateBlogHero, buildHeroPrompt, mdToContentBlocks } from "@/lib/psy-blog";
+import { polishBlogMarkdown } from "@/lib/blog-polish";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,9 +52,19 @@ export async function GET(req: NextRequest) {
       try { heroUrl = await generateBlogHero(buildHeroPrompt(post.title), lock.data.slug); }
       catch (e) { heroError = (e as Error).message.slice(0, 240); }
 
+      // Polish del body con estructura markdown (sin tocar palabras)
+      let polishedBody = post.body_md ?? "";
+      try {
+        const polished = await polishBlogMarkdown(polishedBody);
+        if (polished && polished !== polishedBody) polishedBody = polished;
+      } catch (e) { console.warn("[cron-publish] polish failed:", (e as Error).message); }
+      const polishedBlocks = mdToContentBlocks(polishedBody);
+
       await sb.from(BLOG_TABLE).update({
         status: "published",
         publish_date: new Date().toISOString(),
+        body_md: polishedBody,
+        content: polishedBlocks,
         hero_image: heroUrl,
         og_image: heroUrl,
         hero_image_alt: post.title,
