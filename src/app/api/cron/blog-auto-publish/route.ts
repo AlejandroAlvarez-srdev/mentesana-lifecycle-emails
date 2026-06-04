@@ -60,6 +60,16 @@ export async function GET(req: NextRequest) {
         hero_error: heroError,
         seo_status: "pending",
       }).eq("id", post.id);
+
+      // Liga la keyword del universo al post recién publicado
+      if (post.keyword) {
+        await sb.from("blog_keyword_universe").update({
+          status: "published",
+          post_id: post.id,
+          lock_expires_at: null,
+        }).eq("keyword", post.keyword);
+      }
+
       results.push({ id: post.id, ok: true });
     } catch (e) {
       await sb.from(BLOG_TABLE).update({
