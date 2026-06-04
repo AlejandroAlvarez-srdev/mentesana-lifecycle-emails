@@ -1,7 +1,7 @@
 // Cron: dispara publish para drafts con scheduled_for vencido.
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { psyBlogSb, BLOG_TABLE, contentHash, publishIdempotencyKey, generateBlogHero, buildHeroPrompt, mdToContentBlocks } from "@/lib/psy-blog";
+import { psyBlogSb, BLOG_TABLE, contentHash, publishIdempotencyKey, generateBlogHero, buildHeroPrompt, buildHeroSceneFromTitle, mdToContentBlocks } from "@/lib/psy-blog";
 import { polishBlogMarkdown } from "@/lib/blog-polish";
 
 export const runtime = "nodejs";
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
           content_hash: cHash,
           publish_idempotency_key: idemKey,
           hero_status: "generating",
-          hero_prompt: buildHeroPrompt(post.title),
+          hero_prompt: null,
           publish_attempts: (post.publish_attempts ?? 0) + 1,
         })
         .eq("id", post.id)
@@ -49,8 +49,12 @@ export async function GET(req: NextRequest) {
 
       let heroUrl: string | null = null;
       let heroError: string | null = null;
-      try { heroUrl = await generateBlogHero(buildHeroPrompt(post.title), lock.data.slug); }
-      catch (e) { heroError = (e as Error).message.slice(0, 240); }
+      let heroPromptUsed: string | null = null;
+      try {
+        const scene = await buildHeroSceneFromTitle(post.title);
+        heroPromptUsed = buildHeroPrompt(scene);
+        heroUrl = await generateBlogHero(heroPromptUsed, lock.data.slug);
+      } catch (e) { heroError = (e as Error).message.slice(0, 240); }
 
       // Polish del body con estructura markdown (sin tocar palabras)
       let polishedBody = post.body_md ?? "";
@@ -70,6 +74,7 @@ export async function GET(req: NextRequest) {
         hero_image_alt: post.title,
         hero_status: heroUrl ? "ready" : "failed",
         hero_error: heroError,
+        hero_prompt: heroPromptUsed,
         seo_status: "pending",
       }).eq("id", post.id);
 
