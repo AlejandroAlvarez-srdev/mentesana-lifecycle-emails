@@ -1,8 +1,7 @@
-// Cron cada 5 min: para posts en status='published' con seo_status='pending',
-// Claude genera meta_description, og_title, schema Article JSON-LD,
-// keywords y 3 internal_links sugeridos. El cuerpo del post NUNCA se toca.
+// Cron cada 5 min: rellena meta_description, og, schema, keywords e internal_links
+// para posts published con seo_status='pending'. NO toca el cuerpo (content/body_md).
 import { NextRequest, NextResponse } from "next/server";
-import { psyBlogSb } from "@/lib/psy-blog";
+import { psyBlogSb, BLOG_TABLE } from "@/lib/psy-blog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,9 +20,8 @@ interface SeoOut {
 }
 
 async function generateSeo(post: { title: string; keyword: string; body_md: string }): Promise<SeoOut> {
-  const excerpt = post.body_md.slice(0, 2000);
+  const excerpt = (post.body_md ?? "").slice(0, 2000);
   const prompt = `Eres SEO senior para Mente Sana Psicología (mentesanapsicologia.com), psicología online en España.
-
 Te paso un artículo recién publicado. Genera SEO post-publicación.
 
 Título: ${post.title}
@@ -41,9 +39,7 @@ Devuelve SOLO JSON válido:
     {"slug": "...", "title": "..."},
     {"slug": "...", "title": "..."}
   ]
-}
-
-Los internal_links deben ser sugerencias de slugs a otros artículos de psicología que tengan sentido enlazar desde este post. Inventa slugs plausibles si no estás seguro — los validamos después.`;
+}`;
 
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -67,67 +63,64 @@ Los internal_links deben ser sugerencias de slugs a otros artículos de psicolog
   };
 }
 
-function buildSchema(post: { title: string; slug: string; author_name: string; published_at: string | null; hero_url: string | null; meta_description: string | null }): Record<string, unknown> {
+function buildSchema(post: { title: string; slug: string; author: string; publish_date: string | null; hero_image: string | null; meta_description: string }): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": post.title,
-    "image": post.hero_url ? [post.hero_url] : [],
-    "datePublished": post.published_at,
-    "dateModified": post.published_at,
-    "author": { "@type": "Person", "name": post.author_name },
+    "image": post.hero_image ? [post.hero_image] : [],
+    "datePublished": post.publish_date,
+    "dateModified": post.publish_date,
+    "author": { "@type": "Person", "name": post.author },
     "publisher": {
       "@type": "Organization",
       "name": "Mente Sana Psicología",
       "logo": { "@type": "ImageObject", "url": `${SITE}/images/logo.webp` },
     },
-    "description": post.meta_description ?? "",
+    "description": post.meta_description,
     "mainEntityOfPage": { "@type": "WebPage", "@id": `${SITE}/blog/${post.slug}` },
   };
 }
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
-  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!ANTHROPIC_KEY) return NextResponse.json({ error: "ai_not_configured" }, { status: 500 });
 
   const sb = psyBlogSb();
   const pending = await sb
-    .from("psy_blog_posts")
-    .select("id, title, slug, keyword, body_md, author_name, published_at, hero_url")
+    .from(BLOG_TABLE)
+    .select("id, title, slug, keyword, body_md, author, publish_date, hero_image")
     .eq("status", "published")
     .eq("seo_status", "pending")
-    .order("published_at", { ascending: true })
+    .not("body_md", "is", null)
+    .order("publish_date", { ascending: true })
     .limit(8);
   if (pending.error) return NextResponse.json({ error: pending.error.message }, { status: 500 });
   if (!pending.data || pending.data.length === 0) return NextResponse.json({ ok: true, processed: 0 });
 
-  const results: Array<{ id: string; ok: boolean; error?: string }> = [];
+  const results: Array<{ id: number; ok: boolean; error?: string }> = [];
   for (const post of pending.data) {
     try {
-      // Lock CAS
-      const lock = await sb.from("psy_blog_posts").update({ seo_status: "generating" }).eq("id", post.id).eq("seo_status", "pending").select().maybeSingle();
+      const lock = await sb.from(BLOG_TABLE).update({ seo_status: "generating" }).eq("id", post.id).eq("seo_status", "pending").select().maybeSingle();
       if (!lock.data) { results.push({ id: post.id, ok: false, error: "lock_skipped" }); continue; }
 
-      const seo = await generateSeo({ title: post.title, keyword: post.keyword, body_md: post.body_md });
+      const seo = await generateSeo({ title: post.title, keyword: post.keyword ?? "", body_md: post.body_md ?? "" });
       const schema = buildSchema({
-        title: post.title, slug: post.slug, author_name: post.author_name,
-        published_at: post.published_at, hero_url: post.hero_url, meta_description: seo.meta_description,
+        title: post.title, slug: post.slug, author: post.author ?? "Mente Sana",
+        publish_date: post.publish_date, hero_image: post.hero_image, meta_description: seo.meta_description,
       });
-      await sb.from("psy_blog_posts").update({
+      await sb.from(BLOG_TABLE).update({
         meta_description: seo.meta_description,
-        og_title: seo.og_title,
-        meta_keywords: seo.meta_keywords,
-        og_image_url: post.hero_url,
+        meta_title: seo.og_title,
+        keywords: seo.meta_keywords,
         schema_article: schema,
         internal_links: seo.internal_links,
         seo_status: "ready",
       }).eq("id", post.id);
       results.push({ id: post.id, ok: true });
     } catch (e) {
-      await sb.from("psy_blog_posts").update({ seo_status: "failed", seo_error: (e as Error).message.slice(0, 240) }).eq("id", post.id);
+      await sb.from(BLOG_TABLE).update({ seo_status: "failed", seo_error: (e as Error).message.slice(0, 240) }).eq("id", post.id);
       results.push({ id: post.id, ok: false, error: (e as Error).message });
     }
   }

@@ -1,8 +1,6 @@
-// Cron cada minuto: dispara el pipeline /publish para borradores con
-// scheduled_for <= NOW() y status='scheduled'. Llama internamente al endpoint
-// publish con la cookie de servicio simulando a la psicóloga (vía service key).
+// Cron: dispara publish para drafts con scheduled_for vencido.
 import { NextRequest, NextResponse } from "next/server";
-import { psyBlogSb, contentHash, publishIdempotencyKey, generateBlogHero, buildHeroPrompt } from "@/lib/psy-blog";
+import { psyBlogSb, BLOG_TABLE, contentHash, publishIdempotencyKey, generateBlogHero, buildHeroPrompt } from "@/lib/psy-blog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,27 +13,24 @@ export async function GET(req: NextRequest) {
   if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-
   const sb = psyBlogSb();
   const due = await sb
-    .from("psy_blog_posts")
+    .from(BLOG_TABLE)
     .select("*")
     .eq("status", "scheduled")
     .lte("scheduled_for", new Date().toISOString())
     .order("scheduled_for", { ascending: true })
-    .limit(5); // batch corto para no exceder maxDuration con Higgsfield (~30s cada uno)
+    .limit(5);
   if (due.error) return NextResponse.json({ error: due.error.message }, { status: 500 });
   if (!due.data || due.data.length === 0) return NextResponse.json({ ok: true, processed: 0 });
 
-  const results: Array<{ id: string; ok: boolean; error?: string }> = [];
+  const results: Array<{ id: number; ok: boolean; error?: string }> = [];
   for (const post of due.data) {
     try {
-      const cHash = contentHash(post.title, post.body_md);
+      const cHash = contentHash(post.title, post.body_md ?? "");
       const idemKey = publishIdempotencyKey(post.provider_id, cHash);
-
-      // Lock CAS
       const lock = await sb
-        .from("psy_blog_posts")
+        .from(BLOG_TABLE)
         .update({
           status: "publishing",
           content_hash: cHash,
@@ -48,32 +43,31 @@ export async function GET(req: NextRequest) {
         .eq("status", "scheduled")
         .select()
         .maybeSingle();
-      if (!lock.data) {
-        results.push({ id: post.id, ok: false, error: "lock_skipped" });
-        continue;
-      }
+      if (!lock.data) { results.push({ id: post.id, ok: false, error: "lock_skipped" }); continue; }
 
       let heroUrl: string | null = null;
       let heroError: string | null = null;
       try { heroUrl = await generateBlogHero(buildHeroPrompt(post.title), lock.data.slug); }
       catch (e) { heroError = (e as Error).message.slice(0, 240); }
 
-      await sb.from("psy_blog_posts").update({
+      await sb.from(BLOG_TABLE).update({
         status: "published",
-        published_at: new Date().toISOString(),
-        hero_url: heroUrl,
+        publish_date: new Date().toISOString(),
+        hero_image: heroUrl,
+        og_image: heroUrl,
+        hero_image_alt: post.title,
         hero_status: heroUrl ? "ready" : "failed",
         hero_error: heroError,
+        seo_status: "pending",
       }).eq("id", post.id);
       results.push({ id: post.id, ok: true });
     } catch (e) {
-      await sb.from("psy_blog_posts").update({
+      await sb.from(BLOG_TABLE).update({
         status: "failed",
         publish_error: (e as Error).message.slice(0, 300),
       }).eq("id", post.id);
       results.push({ id: post.id, ok: false, error: (e as Error).message });
     }
   }
-
   return NextResponse.json({ ok: true, processed: results.length, results });
 }
