@@ -68,6 +68,16 @@ export async function GET(req: NextRequest) {
     { auth: { persistSession: false } },
   );
 
+  // Recuperación: sesiones 'waiting' (checkpoints sin checkpoint FINAL) cuya
+  // llamada empezó hace > 3h se asumen terminadas (el final nunca llegó por
+  // crash/cierre brusco/red) → se promueven a 'pending' para resumirse igual.
+  // Ninguna sesión de terapia dura 3h, así que no pisamos llamadas en curso.
+  const STALE_MS = 3 * 60 * 60 * 1000;
+  await sb.from("session_notes")
+    .update({ summary_status: "pending" })
+    .eq("summary_status", "waiting")
+    .lt("meet_started_at", new Date(Date.now() - STALE_MS).toISOString());
+
   // Selecciona hasta 5 pendientes, orden FIFO
   const pending = await sb.from("session_notes")
     .select("id, provider_id, raw_full, raw_excerpt, summary_attempts")
