@@ -12,6 +12,17 @@ export const maxDuration = 300;
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const FIELDS = ["highlights", "how_went", "patient_state", "intervention", "next_steps", "homework", "red_flags"] as const;
+const DIAG_LABELS: Record<string, string> = {
+  edad: "Edad", estado_civil: "Estado civil", pais: "País", ciudad: "Ciudad",
+  motivo_consulta: "Motivo de consulta", anamnesis: "Anamnesis",
+  evaluacion_funciones: "Evaluación de funciones psicológicas",
+  impresion_diagnostica: "Impresión diagnóstica", plan_intervencion: "Plan de intervención",
+  compromiso: "Compromiso",
+};
+function diagToText(diag: Record<string, string> | null | undefined): string {
+  if (!diag || typeof diag !== "object") return "";
+  return Object.entries(diag).filter(([, v]) => v && String(v).trim()).map(([k, v]) => `${DIAG_LABELS[k] || k}: ${v}`).join("\n");
+}
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -29,13 +40,13 @@ export async function GET(req: NextRequest) {
   // de solo-asistencia, que no tienen nada que embeber).
   const { data: rows, error } = await sb
     .from("psychologist_clinical_notes")
-    .select("id, customer_id, highlights, how_went, patient_state, intervention, next_steps, homework, red_flags")
+    .select("id, customer_id, highlights, how_went, patient_state, intervention, next_steps, homework, red_flags, diag_fields")
     .is("embedding", null)
-    .or(FIELDS.map((f) => `${f}.not.is.null`).join(","))
+    .or([...FIELDS.map((f) => `${f}.not.is.null`), "diag_fields.not.is.null"].join(","))
     .limit(30);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const list = (rows ?? []).filter((r: any) => FIELDS.some((f) => r[f] && String(r[f]).trim()));
+  const list = (rows ?? []).filter((r: any) => FIELDS.some((f) => r[f] && String(r[f]).trim()) || diagToText(r.diag_fields));
   if (list.length === 0) return NextResponse.json({ ok: true, processed: 0 });
 
   // Nombres de pacientes (Amelia) en bloque.
@@ -56,6 +67,7 @@ export async function GET(req: NextRequest) {
       const name = r.customer_id ? nameMap.get(Number(r.customer_id)) || "" : "";
       const text = [
         name ? `Paciente: ${name}` : "",
+        diagToText(r.diag_fields),
         r.highlights && `Highlights: ${r.highlights}`,
         r.how_went && `Cómo fue la sesión: ${r.how_went}`,
         r.patient_state && `Estado del paciente: ${r.patient_state}`,
