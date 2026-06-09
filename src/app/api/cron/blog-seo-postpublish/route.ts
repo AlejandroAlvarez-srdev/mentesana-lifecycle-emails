@@ -14,6 +14,7 @@ const SITE = "https://mentesanapsicologia.com";
 
 interface SeoOut {
   meta_description: string;
+  meta_title: string;
   og_title: string;
   meta_keywords: string[];
   internal_links: { slug: string; title: string }[];
@@ -21,17 +22,26 @@ interface SeoOut {
 
 async function generateSeo(post: { title: string; keyword: string; body_md: string }): Promise<SeoOut> {
   const excerpt = (post.body_md ?? "").slice(0, 2000);
-  const prompt = `Eres SEO senior para Mente Sana Psicología (mentesanapsicologia.com), psicología online en España.
+  // Estándar on-page (Checkpoint 1, Ticket 5): title con keyword + gancho emocional,
+  // meta con CTA implícito al Diagnóstico 9,99€. NUNCA afirmar "colegiadas" ni nº de
+  // colegiada (riesgo legal / incidente previo); decir solo "psicólogas".
+  const prompt = `Eres SEO senior para Mente Sana Psicología (mentesanapsicologia.com), psicología online en España. Buyer persona: mujer 25-45.
 Te paso un artículo recién publicado. Genera SEO post-publicación.
 
-Título: ${post.title}
+Título actual: ${post.title}
 Keyword principal: ${post.keyword}
 Contenido (extracto, no lo modifiques):
 """${excerpt}"""
 
+Reglas:
+- El meta_title lleva la keyword exacta al principio + un gancho emocional. Patrones que funcionan: "[Síntoma]: Causas, Señales y Cómo Tratarlo | Mente Sana" · "¿[Pregunta del usuario]? Guía por psicólogas | Mente Sana".
+- El meta_description promete valor concreto y termina con CTA implícito al diagnóstico de 9,99€.
+- NUNCA escribas "colegiada(s)" ni números de colegiada. Di solo "psicólogas" o "nuestras psicólogas".
+
 Devuelve SOLO JSON válido:
 {
-  "meta_description": "max 155 caracteres, contiene la keyword, promete valor concreto, sin clickbait",
+  "meta_title": "max 60 caracteres, keyword exacta al inicio + gancho, acaba en | Mente Sana si cabe",
+  "meta_description": "max 155 caracteres, contiene la keyword, beneficio claro y termina con: Diagnóstico online 9,99€.",
   "og_title": "max 60 caracteres, gancho para Twitter/Facebook",
   "meta_keywords": ["máximo 6 términos relacionados con la keyword principal"],
   "internal_links": [
@@ -53,6 +63,7 @@ Devuelve SOLO JSON válido:
   const parsed = JSON.parse(match?.[0] ?? text);
   return {
     meta_description: String(parsed.meta_description ?? "").slice(0, 160),
+    meta_title: String(parsed.meta_title ?? parsed.og_title ?? "").slice(0, 70),
     og_title: String(parsed.og_title ?? "").slice(0, 70),
     meta_keywords: Array.isArray(parsed.meta_keywords) ? parsed.meta_keywords.slice(0, 6).map(String) : [],
     internal_links: Array.isArray(parsed.internal_links)
@@ -112,7 +123,7 @@ export async function GET(req: NextRequest) {
       });
       await sb.from(BLOG_TABLE).update({
         meta_description: seo.meta_description,
-        meta_title: seo.og_title,
+        meta_title: seo.meta_title,
         keywords: seo.meta_keywords,
         schema_article: schema,
         internal_links: seo.internal_links,
