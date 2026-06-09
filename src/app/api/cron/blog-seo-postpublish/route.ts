@@ -20,8 +20,25 @@ interface SeoOut {
   internal_links: { slug: string; title: string }[];
 }
 
-async function generateSeo(post: { title: string; keyword: string; body_md: string }): Promise<SeoOut> {
-  const excerpt = (post.body_md ?? "").slice(0, 2000);
+// Los artículos legacy guardan el cuerpo en `content` (jsonb), no en body_md.
+// Extrae texto plano de los bloques para tener excerpt en esos casos.
+function extractText(content: unknown): string {
+  let arr: unknown[] = [];
+  try { arr = typeof content === "string" ? JSON.parse(content) : (content as unknown[]); } catch { return ""; }
+  if (!Array.isArray(arr)) return "";
+  const parts: string[] = [];
+  for (const raw of arr) {
+    const b = raw as Record<string, unknown>;
+    if (typeof b?.title === "string") parts.push(b.title);
+    if (typeof b?.content === "string") parts.push(b.content);
+    else if (Array.isArray(b?.content)) parts.push((b.content as unknown[]).map((x) => (typeof x === "string" ? x : ((x as Record<string, unknown>)?.text as string) ?? "")).join(" "));
+  }
+  return parts.join("\n");
+}
+
+async function generateSeo(post: { title: string; keyword: string; body_md: string; content?: unknown }): Promise<SeoOut> {
+  const source = post.body_md && post.body_md.length > 0 ? post.body_md : extractText(post.content);
+  const excerpt = source.slice(0, 2000);
   // Estándar on-page (Checkpoint 1, Ticket 5): title con keyword + gancho emocional,
   // meta con CTA implícito al Diagnóstico 9,99€. NUNCA afirmar "colegiadas" ni nº de
   // colegiada (riesgo legal / incidente previo); decir solo "psicólogas".
@@ -101,10 +118,9 @@ export async function GET(req: NextRequest) {
   const sb = psyBlogSb();
   const pending = await sb
     .from(BLOG_TABLE)
-    .select("id, title, slug, keyword, body_md, author, publish_date, hero_image")
+    .select("id, title, slug, keyword, body_md, content, author, publish_date, hero_image")
     .eq("status", "published")
     .eq("seo_status", "pending")
-    .not("body_md", "is", null)
     .order("publish_date", { ascending: true })
     .limit(8);
   if (pending.error) return NextResponse.json({ error: pending.error.message }, { status: 500 });
@@ -116,7 +132,7 @@ export async function GET(req: NextRequest) {
       const lock = await sb.from(BLOG_TABLE).update({ seo_status: "generating" }).eq("id", post.id).eq("seo_status", "pending").select().maybeSingle();
       if (!lock.data) { results.push({ id: post.id, ok: false, error: "lock_skipped" }); continue; }
 
-      const seo = await generateSeo({ title: post.title, keyword: post.keyword ?? "", body_md: post.body_md ?? "" });
+      const seo = await generateSeo({ title: post.title, keyword: post.keyword ?? "", body_md: post.body_md ?? "", content: post.content });
       const schema = buildSchema({
         title: post.title, slug: post.slug, author: post.author ?? "Mente Sana",
         publish_date: post.publish_date, hero_image: post.hero_image, meta_description: seo.meta_description,
