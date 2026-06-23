@@ -157,16 +157,23 @@ export async function GET(req: NextRequest) {
     const avgDays = daysCount > 0 ? Math.round(daysSum / daysCount) : null;
     const famPct = Object.fromEntries(Object.entries(famCount).filter(([, v]) => v > 0).map(([k, v]) => [k, pct(v, converted)]));
 
+    // Embebe inline (son pocas filas): así el funnel SIEMPRE queda buscable sin depender
+    // del loop con tope de 200 del final.
+    const putFunnel = async (source_id: string, title: string, content: string, metadata: any) => {
+      const emb = await voyageEmbed(content, "document").catch(() => null);
+      await sb.from("jarvis_knowledge").upsert({ kind: "funnel", source_id, title, content, metadata, updated_at: new Date().toISOString(), embedding: emb ? (`[${emb.join(",")}]` as any) : null, embedded_at: emb ? new Date().toISOString() : null }, { onConflict: "kind,source_id" });
+      stats.upserted.funnel++;
+      if (emb) stats.embedded++;
+    };
+
     const overall = `Funnel diagnóstico→bono (datos reales del CRM, agregado). De ${cohortTotal} pacientes que hicieron el diagnóstico de 9,99€, ${converted} compraron después un bono → conversión cita→paquete del ${pct(converted, cohortTotal)}%. Tiempo medio del diagnóstico a la compra del bono: ${avgDays ?? "—"} días. Ingresos generados por esos bonos: ${Math.round(revenue)}€. Bono elegido tras convertir: ${Object.entries(famPct).map(([k, v]) => `${k} ${v}%`).join(", ")}.`;
-    await sb.from("jarvis_knowledge").upsert({ kind: "funnel", source_id: "diag-to-bono-overall", title: "Funnel diagnóstico→bono (global)", content: overall, metadata: { cohort: cohortTotal, converted, conversion_pct: pct(converted, cohortTotal), avg_days: avgDays, revenue: Math.round(revenue), by_bono: famPct }, updated_at: new Date().toISOString(), embedding: null }, { onConflict: "kind,source_id" });
-    stats.upserted.funnel++;
+    await putFunnel("diag-to-bono-overall", "Funnel diagnóstico→bono (global)", overall, { cohort: cohortTotal, converted, conversion_pct: pct(converted, cohortTotal), avg_days: avgDays, revenue: Math.round(revenue), by_bono: famPct });
 
     // Filas mensuales (últimos 12 meses con cohorte) para retrieval granular.
     const months = [...monthly.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
     for (const [ym, m] of months) {
       const content = `Funnel mensual ${ym}: ${m.cohort} pacientes hicieron el diagnóstico 9,99€, ${m.conv} convirtieron a bono (conversión cita→paquete ${pct(m.conv, m.cohort)}%).`;
-      await sb.from("jarvis_knowledge").upsert({ kind: "funnel", source_id: `diag-to-bono-${ym}`, title: `Funnel ${ym}`, content, metadata: { month: ym, cohort: m.cohort, converted: m.conv, conversion_pct: pct(m.conv, m.cohort) }, updated_at: new Date().toISOString(), embedding: null }, { onConflict: "kind,source_id" });
-      stats.upserted.funnel++;
+      await putFunnel(`diag-to-bono-${ym}`, `Funnel ${ym}`, content, { month: ym, cohort: m.cohort, converted: m.conv, conversion_pct: pct(m.conv, m.cohort) });
     }
   } catch (e) { console.error("funnel embed", e); stats.errors++; }
 
