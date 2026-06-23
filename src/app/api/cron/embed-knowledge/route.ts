@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const got = req.headers.get("authorization") || "";
   if (expected && got !== `Bearer ${expected}`) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const stats = { upserted: { meta: 0, diagnostico: 0, notes: 0, complaints: 0, video_briefs: 0, patient_tasks: 0 }, embedded: 0, errors: 0 };
+  const stats = { upserted: { meta: 0, diagnostico: 0, notes: 0, complaints: 0, video_briefs: 0, patient_tasks: 0, funnel: 0 }, embedded: 0, errors: 0 };
 
   // ─── 1) META ADS — agrega por fb_ad_id últimos 30d ───
   try {
@@ -95,6 +95,80 @@ export async function GET(req: NextRequest) {
       stats.upserted.patient_tasks++;
     }
   } catch (e) { console.error("ptasks embed", e); stats.errors++; }
+
+  // ─── 7) FUNNEL: conversión diagnóstico 9,99€ (cita) → bono (paquete) ───
+  // Todo agregado, sin ningún paciente individual. Da a JARVIS el contexto del embudo:
+  // cuántos de los que hacen el diagnóstico compran luego un bono, en cuánto tiempo, qué bono y cuánto ingresan.
+  try {
+    const DIAG_SVCS = [8, 11]; // "Sesion Individual - 9,99" y "- 9,99 - Home"
+    const BONO_FAMILIES: Record<string, number[]> = {
+      "Felicidad": [5, 10, 11, 14, 15],
+      "Compañía": [4, 9, 12, 16, 17],
+      "Amor": [6],
+    };
+    const BONO_IDS = Object.values(BONO_FAMILIES).flat();
+    const familyOf = (pid: number) => Object.entries(BONO_FAMILIES).find(([, ids]) => ids.includes(Number(pid)))?.[0] ?? "Otro";
+
+    const cb = ameliaTable("customer_bookings");
+    const ab = ameliaTable("appointments");
+    const pc = ameliaTable("packages_to_customers");
+
+    // Cohorte: clientes que hicieron el diagnóstico 9,99€, con la fecha de su primer diagnóstico.
+    const diag = await ameliaQuery<any>(
+      `SELECT cb.customerId cid, MIN(a.bookingStart) first_diag
+       FROM ${cb} cb JOIN ${ab} a ON a.id = cb.appointmentId
+       WHERE a.serviceId IN (${DIAG_SVCS.join(",")}) AND cb.status NOT IN ('canceled','rejected')
+       GROUP BY cb.customerId`,
+    );
+    // Compras de bono aprobadas.
+    const bonos = await ameliaQuery<any>(
+      `SELECT customerId cid, packageId pid, price, purchased
+       FROM ${pc} WHERE status='approved' AND packageId IN (${BONO_IDS.join(",")}) AND purchased IS NOT NULL`,
+    );
+    const bonoByCust = new Map<number, any[]>();
+    for (const b of bonos) { const arr = bonoByCust.get(b.cid) ?? []; arr.push(b); bonoByCust.set(b.cid, arr); }
+
+    const cohortTotal = diag.length;
+    let converted = 0, daysSum = 0, daysCount = 0, revenue = 0;
+    const famCount: Record<string, number> = { "Felicidad": 0, "Compañía": 0, "Amor": 0, "Otro": 0 };
+    const monthly = new Map<string, { cohort: number; conv: number }>();
+
+    for (const d of diag) {
+      const firstDiag = new Date(d.first_diag);
+      const ym = firstDiag.toISOString().slice(0, 7);
+      const mrow = monthly.get(ym) ?? { cohort: 0, conv: 0 };
+      mrow.cohort++;
+      // Primer bono comprado en o después del diagnóstico = conversión forward.
+      const after = (bonoByCust.get(d.cid) ?? [])
+        .filter((b) => new Date(b.purchased).getTime() >= firstDiag.getTime() - 86400000)
+        .sort((a, b) => new Date(a.purchased).getTime() - new Date(b.purchased).getTime());
+      if (after.length > 0) {
+        const first = after[0];
+        converted++; mrow.conv++;
+        revenue += Number(first.price ?? 0);
+        famCount[familyOf(first.pid)] = (famCount[familyOf(first.pid)] ?? 0) + 1;
+        const days = (new Date(first.purchased).getTime() - firstDiag.getTime()) / 86400000;
+        if (days >= 0) { daysSum += days; daysCount++; }
+      }
+      monthly.set(ym, mrow);
+    }
+
+    const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0);
+    const avgDays = daysCount > 0 ? Math.round(daysSum / daysCount) : null;
+    const famPct = Object.fromEntries(Object.entries(famCount).filter(([, v]) => v > 0).map(([k, v]) => [k, pct(v, converted)]));
+
+    const overall = `Funnel diagnóstico→bono (datos reales del CRM, agregado). De ${cohortTotal} pacientes que hicieron el diagnóstico de 9,99€, ${converted} compraron después un bono → conversión cita→paquete del ${pct(converted, cohortTotal)}%. Tiempo medio del diagnóstico a la compra del bono: ${avgDays ?? "—"} días. Ingresos generados por esos bonos: ${Math.round(revenue)}€. Bono elegido tras convertir: ${Object.entries(famPct).map(([k, v]) => `${k} ${v}%`).join(", ")}.`;
+    await sb.from("jarvis_knowledge").upsert({ kind: "funnel", source_id: "diag-to-bono-overall", title: "Funnel diagnóstico→bono (global)", content: overall, metadata: { cohort: cohortTotal, converted, conversion_pct: pct(converted, cohortTotal), avg_days: avgDays, revenue: Math.round(revenue), by_bono: famPct }, updated_at: new Date().toISOString(), embedding: null }, { onConflict: "kind,source_id" });
+    stats.upserted.funnel++;
+
+    // Filas mensuales (últimos 12 meses con cohorte) para retrieval granular.
+    const months = [...monthly.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
+    for (const [ym, m] of months) {
+      const content = `Funnel mensual ${ym}: ${m.cohort} pacientes hicieron el diagnóstico 9,99€, ${m.conv} convirtieron a bono (conversión cita→paquete ${pct(m.conv, m.cohort)}%).`;
+      await sb.from("jarvis_knowledge").upsert({ kind: "funnel", source_id: `diag-to-bono-${ym}`, title: `Funnel ${ym}`, content, metadata: { month: ym, cohort: m.cohort, converted: m.conv, conversion_pct: pct(m.conv, m.cohort) }, updated_at: new Date().toISOString(), embedding: null }, { onConflict: "kind,source_id" });
+      stats.upserted.funnel++;
+    }
+  } catch (e) { console.error("funnel embed", e); stats.errors++; }
 
   // ─── EMBEBER LOS QUE NO TIENEN EMBEDDING ───
   // Procesa en lotes de 50 para no exceder rate limit Voyage.
