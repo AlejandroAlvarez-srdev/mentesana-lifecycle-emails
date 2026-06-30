@@ -13,3 +13,18 @@ export { appDownloadInvitationEmail } from "./app-download-invitation";
 export { appDownloadReminderEmail } from "./app-download-reminder";
 export { appFeatureMariaEmail } from "./app-feature-maria";
 export { blogReactivationEmail } from "./blog-reactivation";
+export {
+  funnelRecontacto1Email,
+  funnelRecontacto2BonosEmail,
+  funnelBienvenidaEmail,
+  funnelLeadgen1Email,
+  funnelLeadgen2Email,
+  funnelLeadgen3Email,
+  funnelLeadgen4Email,
+  funnelLeadgen5Email,
+  funnelLeadgen6Email,
+  funnelLeadgenComoFuncionaEmail,
+  funnelNurturingEmail,
+  funnelBonosOfertasEmail,
+  funnelSeguimientoEmail,
+} from "./funnel";
