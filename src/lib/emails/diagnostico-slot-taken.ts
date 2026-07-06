@@ -17,15 +17,15 @@ export function diagnosticoSlotTakenEmail(props: Props): { subject: string; html
   const greeting = first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : "Hola";
   const psi = props.psychologistName || "tu psicóloga";
 
-  const subject = "Tu hueco se ocupó — ayúdanos a reagendar 🙏";
+  const subject = "Tu diagnóstico está pagado — reagendamos tu sesión 🙏";
 
   const content = `
     <p style="margin:0 0 6px;font-family:'Caveat',cursive;font-size:28px;color:${GOLD};line-height:1;">¡Hola ${greeting}!</p>
     <h1 style="margin:0 0 18px;font-family:'Playfair Display',Georgia,serif;font-size:26px;line-height:1.2;color:#1a0a1f;font-weight:400;letter-spacing:-0.02em;">
-      Tu pago llegó <em style="color:${PURPLE};font-style:normal;">perfectamente</em> — pero el horario que elegiste se ocupó mientras pagabas.
+      Tu pago llegó <em style="color:${PURPLE};font-style:normal;">perfectamente</em> — pero no quedó confirmado el horario de tu sesión.
     </h1>
     <p style="margin:0 0 14px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.65;color:#1a0a1f;opacity:0.85;">
-      Sentimos mucho el malentendido. Otra persona reservó ese hueco con ${psi} justo en el momento en que terminabas el pago. No te preocupes — <strong>tu sesión de diagnóstico sigue garantizada</strong> y la moveremos a otro hueco contigo.
+      Sentimos el inconveniente. No pudimos confirmar tu hueco con ${psi} al terminar el pago. No te preocupes — <strong>tu sesión de diagnóstico sigue garantizada</strong> y la reagendamos contigo enseguida.
     </p>
 
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:${CREAM};border:1.5px solid ${PURPLE}33;border-radius:18px;margin:0 0 24px;">
