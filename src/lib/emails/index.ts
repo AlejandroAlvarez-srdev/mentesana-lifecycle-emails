@@ -12,6 +12,8 @@ export { reportDeliveryEmail } from "./report-delivery";
 export { appDownloadInvitationEmail } from "./app-download-invitation";
 export { appDownloadReminderEmail } from "./app-download-reminder";
 export { appFeatureMariaEmail } from "./app-feature-maria";
+export { appNoNecesitasTerapiaEmail } from "./app-no-necesitas-terapia";
+export { appActualizaODescargaEmail } from "./app-actualiza-o-descarga";
 export { blogReactivationEmail } from "./blog-reactivation";
 export {
   funnelRecontacto1Email,
