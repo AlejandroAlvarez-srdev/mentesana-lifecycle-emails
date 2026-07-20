@@ -86,7 +86,7 @@ export function reactivationEmailB({ name, psychologistName }: { name: string; p
     <div style="margin:22px 0;padding:18px 20px;background:#faf7fc;border:1px solid ${PURPLE}22;border-radius:12px;">
       <p style="margin:0 0 10px;font-size:13px;color:${PURPLE};font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">Tu psicóloga te recomendó un bono</p>
       <p style="margin:0;font-size:14px;color:#1a0a1f;line-height:1.6;">
-        En tu informe quedó registrada una recomendación clínica concreta sobre el ritmo y la duración del proceso. Lo más común es empezar con el <strong style="color:${PURPLE};">Bono Compañía (4 sesiones, 125€)</strong> o el <strong style="color:${PURPLE};">Bono Felicidad (8 sesiones, 185€)</strong>.
+        En tu informe quedó registrada una recomendación clínica concreta sobre el ritmo y la duración del proceso. Lo más común es empezar con el <strong style="color:${PURPLE};">Bono Compañía (4 sesiones, 149,99€)</strong> o el <strong style="color:${PURPLE};">Bono Felicidad (8 sesiones, 229,99€)</strong>.
       </p>
     </div>
 
@@ -140,13 +140,13 @@ export function reactivationEmailC({ name, psychologistName, daysSincePurchase }
       <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
         <div style="flex:1;min-width:140px;background:#fff;padding:12px;border-radius:10px;border:1px solid #ede4f4;text-align:center;">
           <div style="font-size:10px;color:${GOLD};font-weight:800;text-transform:uppercase;letter-spacing:0.8px;">Bono Compañía</div>
-          <div style="font-size:22px;color:${PURPLE};font-weight:900;margin:4px 0;">125€</div>
+          <div style="font-size:22px;color:${PURPLE};font-weight:900;margin:4px 0;">149,99€</div>
           <div style="font-size:11px;color:#666;">4 sesiones</div>
         </div>
         <div style="flex:1;min-width:140px;background:#fff;padding:12px;border-radius:10px;border:2px solid ${PURPLE};text-align:center;position:relative;">
           <div style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:${PURPLE};color:#fff;padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:0.5px;">MÁS ELEGIDO</div>
           <div style="font-size:10px;color:${GOLD};font-weight:800;text-transform:uppercase;letter-spacing:0.8px;">Bono Felicidad</div>
-          <div style="font-size:22px;color:${PURPLE};font-weight:900;margin:4px 0;">185€</div>
+          <div style="font-size:22px;color:${PURPLE};font-weight:900;margin:4px 0;">229,99€</div>
           <div style="font-size:11px;color:#666;">8 sesiones</div>
         </div>
       </div>

@@ -109,14 +109,14 @@ export function renderOfertaTarifas({ firstName, unsubscribeUrl }: Opts): { subj
 
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#ffffff;border:2px solid #6A178C;border-radius:18px;margin:0 0 14px;box-shadow:0 8px 24px rgba(106,23,140,0.10);">
               <tr><td style="padding:20px 22px;">
-                <span style="display:inline-block;background:#22c55e;color:#ffffff;font-size:10px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-bottom:10px;">⭐ El más elegido · Ahorras 175€</span>
+                <span style="display:inline-block;background:#22c55e;color:#ffffff;font-size:10px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-bottom:10px;">⭐ El más elegido · Ahorras 170€</span>
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tr>
                   <td style="vertical-align:top;">
                     <p style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:20px;color:#1a0a1f;">Bono Felicidad</p>
-                    <p style="margin:3px 0 0;font-size:13px;color:#8a7a90;">8 sesiones de 50 min · 23€/sesión</p>
+                    <p style="margin:3px 0 0;font-size:13px;color:#8a7a90;">8 sesiones de 50 min · 28,75€/sesión</p>
                   </td>
                   <td align="right" style="vertical-align:top;white-space:nowrap;padding-left:10px;">
-                    <span style="font-family:'Playfair Display',Georgia,serif;font-size:27px;font-weight:700;color:#6A178C;">185€</span>
+                    <span style="font-family:'Playfair Display',Georgia,serif;font-size:27px;font-weight:700;color:#6A178C;">229,99€</span>
                   </td>
                 </tr></table>
                 <a href="https://buy.stripe.com/REDACTED" target="_blank" style="display:block;text-align:center;margin-top:14px;background:#6A178C;background:linear-gradient(135deg,#6A178C 0%,#8B2FB5 100%);color:#ffffff;text-decoration:none;padding:15px;border-radius:999px;font-size:15px;font-weight:800;box-shadow:0 6px 18px rgba(106,23,140,0.28);">💜&nbsp;&nbsp;Comprar al precio de hoy →</a>
@@ -128,10 +128,10 @@ export function renderOfertaTarifas({ firstName, unsubscribeUrl }: Opts): { subj
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tr>
                   <td style="vertical-align:top;">
                     <p style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:20px;color:#1a0a1f;">Bono Compañía</p>
-                    <p style="margin:3px 0 0;font-size:13px;color:#8a7a90;">4 sesiones de 50 min · 29,99€/sesión</p>
+                    <p style="margin:3px 0 0;font-size:13px;color:#8a7a90;">4 sesiones de 50 min · 37,50€/sesión</p>
                   </td>
                   <td align="right" style="vertical-align:top;white-space:nowrap;padding-left:10px;">
-                    <span style="font-family:'Playfair Display',Georgia,serif;font-size:27px;font-weight:700;color:#6A178C;">120€</span>
+                    <span style="font-family:'Playfair Display',Georgia,serif;font-size:27px;font-weight:700;color:#6A178C;">149,99€</span>
                   </td>
                 </tr></table>
                 <a href="https://buy.stripe.com/REDACTED" target="_blank" style="display:block;text-align:center;margin-top:14px;background:#6A178C;color:#ffffff;text-decoration:none;padding:15px;border-radius:999px;font-size:15px;font-weight:800;">Comprar al precio de hoy →</a>
