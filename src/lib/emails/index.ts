@@ -14,6 +14,7 @@ export { appDownloadReminderEmail } from "./app-download-reminder";
 export { appFeatureMariaEmail } from "./app-feature-maria";
 export { appNoNecesitasTerapiaEmail } from "./app-no-necesitas-terapia";
 export { appActualizaODescargaEmail } from "./app-actualiza-o-descarga";
+export { regaloCeoDiagnosticoGratisEmail } from "./regalo-ceo-diagnostico-gratis";
 export { blogReactivationEmail } from "./blog-reactivation";
 export {
   funnelRecontacto1Email,
