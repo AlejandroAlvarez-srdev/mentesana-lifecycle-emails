@@ -15,6 +15,7 @@ export { appFeatureMariaEmail } from "./app-feature-maria";
 export { appNoNecesitasTerapiaEmail } from "./app-no-necesitas-terapia";
 export { appActualizaODescargaEmail } from "./app-actualiza-o-descarga";
 export { regaloCeoDiagnosticoGratisEmail } from "./regalo-ceo-diagnostico-gratis";
+export { regaloCortesiaBonoDiagnosticoGratisEmail } from "./regalo-cortesia-bono-diagnostico-gratis";
 export { blogReactivationEmail } from "./blog-reactivation";
 export {
   funnelRecontacto1Email,
