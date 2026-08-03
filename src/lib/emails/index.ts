@@ -18,6 +18,8 @@ export { appDownloadDescargaEmail } from "./app-download-descarga";
 export { appDownloadActualizaEmail } from "./app-download-actualiza";
 export { regaloCeoDiagnosticoGratisEmail } from "./regalo-ceo-diagnostico-gratis";
 export { regaloCortesiaBonoDiagnosticoGratisEmail } from "./regalo-cortesia-bono-diagnostico-gratis";
+export { urgenciaCtoAbandonedEmail } from "./urgencia-cto-abandoned";
+export { urgenciaCtoPagaronEmail } from "./urgencia-cto-pagaron";
 export { blogReactivationEmail } from "./blog-reactivation";
 export {
   funnelRecontacto1Email,
