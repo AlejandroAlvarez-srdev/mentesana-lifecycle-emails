@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   const nowIso = new Date().toISOString();
   const { data: pending, error: readErr } = await sb
     .from("app_chat_email_queue")
-    .select("id, conversation_id, user_email, user_name, message_count, last_message_body")
+    .select("id, conversation_id, user_email, user_name, message_count, last_message_body, agent_email, agent_name")
     .is("sent_at", null)
     .lte("scheduled_for", nowIso)
     .order("scheduled_for", { ascending: true })
@@ -49,12 +49,21 @@ export async function GET(req: NextRequest) {
         messageCount: row.message_count ?? 1,
         lastMessageBody: row.last_message_body,
       });
+      // Reply-to al agente que inició la conv si conocemos su email —
+      // así el reply al email del cliente aterriza en su bandeja directo
+      // y no en la cola general de hola@.
+      const replyTo = (row.agent_email && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(row.agent_email))
+        ? row.agent_email
+        : "hola@mentesanapsicologia.com";
+      const fromName = row.agent_name?.trim() || undefined;
+
       const res = await sendEmail({
         to: row.user_email,
         toName: row.user_name ?? undefined,
         subject,
         html,
-        replyTo: "hola@mentesanapsicologia.com",
+        replyTo,
+        fromName,
       });
       if (res.success) {
         await sb.from("app_chat_email_queue").update({

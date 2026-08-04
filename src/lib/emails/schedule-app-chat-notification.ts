@@ -14,12 +14,16 @@ export async function scheduleAppChatNotification({
   userName,
   messageBody,
   delayMinutes = 15,
+  agentEmail,
+  agentName,
 }: {
   conversationId: string;
   userEmail: string;
   userName?: string | null;
   messageBody?: string | null;
   delayMinutes?: number;
+  agentEmail?: string | null;
+  agentName?: string | null;
 }): Promise<{ scheduled: boolean; coalesced: boolean; error?: string }> {
   if (!conversationId || !userEmail) return { scheduled: false, coalesced: false, error: "missing_params" };
 
@@ -43,6 +47,8 @@ export async function scheduleAppChatNotification({
   if (readErr) return { scheduled: false, coalesced: false, error: readErr.message };
 
   if (existing) {
+    // Preserva agent_email del primer mensaje del batch (quien inició la conv
+    // sigue siendo el reply-to natural aunque respondan varios agentes).
     const { error: updErr } = await sb
       .from("app_chat_email_queue")
       .update({
@@ -66,6 +72,8 @@ export async function scheduleAppChatNotification({
     last_message_body: preview,
     scheduled_for: scheduledFor,
     message_count: 1,
+    agent_email: agentEmail ?? null,
+    agent_name: agentName ?? null,
   });
   if (insErr) return { scheduled: false, coalesced: false, error: insErr.message };
   return { scheduled: true, coalesced: false };
