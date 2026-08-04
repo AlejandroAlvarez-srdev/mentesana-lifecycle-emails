@@ -49,20 +49,18 @@ export async function GET(req: NextRequest) {
         messageCount: row.message_count ?? 1,
         lastMessageBody: row.last_message_body,
       });
-      // Reply-to al agente que inició la conv si conocemos su email —
-      // así el reply al email del cliente aterriza en su bandeja directo
-      // y no en la cola general de hola@.
-      const replyTo = (row.agent_email && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(row.agent_email))
-        ? row.agent_email
-        : "hola@mentesanapsicologia.com";
+      // Reply-to SIEMPRE hola@ — este email es transaccional/promocional
+      // para incentivar al cliente a abrir la app, no para conversar por
+      // email. Si el cliente responde, lo triamos como cualquier email
+      // entrante de hola@. Mantenemos fromName con el nombre del agente
+      // para personalización visual (el remitente aparece humanizado).
       const fromName = row.agent_name?.trim() || undefined;
-
       const res = await sendEmail({
         to: row.user_email,
         toName: row.user_name ?? undefined,
         subject,
         html,
-        replyTo,
+        replyTo: "hola@mentesanapsicologia.com",
         fromName,
       });
       if (res.success) {
