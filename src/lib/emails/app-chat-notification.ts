@@ -82,10 +82,10 @@ export function appChatNotificationEmail({ firstName, conversationId, messageCou
           <tr>
             <td align="center" style="padding:0 8px;">
               <a href="${PLAY_STORE}" style="display:inline-block;margin:4px 6px;">
-                <img src="https://mentesanapsicologia.com/images/badges/google-play.png" alt="Google Play" width="140" style="display:block;width:140px;height:auto;border:0;">
+                <img src="https://mentesanapsicologia.com/images/app/google-play-badge.png" alt="Google Play" width="140" style="display:block;width:140px;height:auto;border:0;">
               </a>
               <a href="${APP_STORE}" style="display:inline-block;margin:4px 6px;">
-                <img src="https://mentesanapsicologia.com/images/badges/app-store.png" alt="App Store" width="140" style="display:block;width:140px;height:auto;border:0;">
+                <img src="https://mentesanapsicologia.com/images/app/app-store-badge.png" alt="App Store" width="140" style="display:block;width:140px;height:auto;border:0;">
               </a>
             </td>
           </tr>
