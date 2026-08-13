@@ -213,20 +213,12 @@ async function sendWaStep(
 
   const phone = r.phone.replace(/\s+/g, "");
 
-  // Resolver número de origen (default whatsapp_numbers). Best-effort.
-  let fromNumber: string | null = null;
-  try {
-    const { data: def } = await sb
-      .from("whatsapp_numbers")
-      .select("phone_number, phone_number_id")
-      .eq("status", "active")
-      .eq("is_default", true)
-      .limit(1)
-      .maybeSingle<{ phone_number: string | null; phone_number_id: string | null }>();
-    fromNumber = def?.phone_number_id ?? def?.phone_number ?? null;
-  } catch {
-    /* best-effort */
-  }
+  // Las 3 plantillas bienvenida_*_v1 viven en el WABA REDACTED_ID
+  // (número Mente Sana +34 XXX XXX XXX). Los demás WABAs (Soporte, Ventas)
+  // tienen restringida la creación de plantillas nuevas por Meta.
+  // Hardcodeamos el phone_number_id para que broadcast/template use el WABA
+  // correcto — el is_default global sigue siendo Soporte para el resto de flujos.
+  const fromNumber = process.env.BIENVENIDA_WA_PHONE_NUMBER_ID ?? "REDACTED_ID";
 
   // Ensure conversación existe (para que broadcast persista el msg en messages_mentesana).
   try {
