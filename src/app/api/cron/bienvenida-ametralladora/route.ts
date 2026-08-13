@@ -6,18 +6,28 @@
 // gracia). Se ejecuta cada 5 minutos vía Vercel Cron.
 //
 // Cadencia (post-reserva → hasta confirmed):
-//   step_email_2min     · T+2min           · Email "Confirma tu cita — 2 min"
-//   step_wa_15min       · T+15min          · WhatsApp "te esperamos el {slot}"
-//   step_email_2h       · T+2h             · Email "{psi} tiene tu hueco parado"
-//   step_email_manana   · T-24h (approx)   · Email "Mañana es tu bienvenida"
-//   step_wa_manana      · T-24h (approx)   · WhatsApp "Mañana ({slot}) tu sesión"
-//   step_wa_en2h        · T-2h             · WhatsApp "En 2h empieza tu sesión"
-//   step_push_en2h      · T-2h             · Push (skipped: solo app nativa)
-//   step_push_meet      · T-15min          · Push con {meet_url} (skipped)
+//   step_email_2min          · T+2min                        · Email "Confirma tu cita — 2 min"
+//   step_email_descarga_app  · T+30min (si app_login IS NULL)· Email "Descarga la app"
+//   step_wa_15min            · T+15min                       · WhatsApp "te esperamos el {slot}"
+//   step_email_2h            · T+2h                          · Email "{psi} tiene tu hueco parado"
+//   step_email_acceso_app    · T+30min desde app_login_at    · Email suave "Ya estás en la app"
+//   step_email_manana        · T-24h (approx)                · Email "Mañana es tu bienvenida"
+//   step_wa_manana           · T-24h (approx)                · WhatsApp "Mañana ({slot}) tu sesión"
+//   step_email_atencion      · T-6h del slot                 · Email URGENTE (agresivo)
+//   step_wa_en2h             · T-2h                          · WhatsApp "En 2h empieza tu sesión"
+//   step_push_en2h           · T-2h                          · Push (skipped: solo app nativa)
+//   step_push_meet           · T-15min                       · Push con {meet_url} (skipped)
 //
 // Idempotencia: cada step se guarda en `bienvenida_reservas.sent_steps` (text[]).
 // Nunca se reenvía el mismo step para la misma reserva. La query también filtra
 // `confirmed_at IS NULL` para PARAR toda la ametralladora en cuanto confirmen.
+//
+// Cortes por login en la app (nuevo):
+//   Si `app_login_at IS NOT NULL AND confirmed_at IS NULL` la fila entra en
+//   modo "logged_not_confirmed": el paciente ya está dentro de la app, así que
+//   los canales ruidosos (WA, push, email agresivo, email descarga) se saltan
+//   y SOLO se dispara `step_email_acceso_app` como recordatorio suave.
+//   Si ambos son NULL → modo "ametralladora_completa" (comportamiento clásico).
 //
 // Auth: Bearer CRON_SECRET (mismo patrón que el resto de crons).
 
@@ -28,7 +38,11 @@ import {
   emailBienvenidaConfirma2min,
   emailBienvenidaRecordatorio2h,
   emailBienvenidaManana,
+  emailBienvenidaDescargaApp,
+  emailBienvenidaAccesoApp,
+  emailBienvenidaAtencionAgresivo,
   type BienvenidaEmailProps,
+  type BienvenidaAppEmailProps,
   type RenderedEmail,
 } from "@/emails/bienvenida-templates";
 import {
@@ -60,10 +74,13 @@ const sb = createClient(
 
 type StepId =
   | "step_email_2min"
+  | "step_email_descarga_app"
   | "step_wa_15min"
   | "step_email_2h"
+  | "step_email_acceso_app"
   | "step_email_manana"
   | "step_wa_manana"
+  | "step_email_atencion"
   | "step_wa_en2h"
   | "step_push_en2h"
   | "step_push_meet";
@@ -73,23 +90,60 @@ type Channel = "email" | "whatsapp" | "push";
 interface StepDef {
   id: StepId;
   channel: Channel;
-  /** Offset relativo a `created_at` (ms). null → se ancla al slot en su lugar. */
+  /** Offset relativo a `created_at` (ms). null → se ancla al slot / app_login en su lugar. */
   offsetFromCreatedMs: number | null;
   /** Offset relativo a `slot_iso` (ms, negativo = antes del slot). */
   offsetFromSlotMs: number | null;
+  /**
+   * Offset relativo a `app_login_at` (ms). Solo aplica en modo
+   * "logged_not_confirmed". Si es null, no depende del login.
+   */
+  offsetFromLoginMs?: number | null;
 }
 
 // Nota: el orden importa solo para la salida del log — el `elapsed` decide qué dispara.
 const CADENCE: StepDef[] = [
-  { id: "step_email_2min",   channel: "email",    offsetFromCreatedMs: 2 * 60_000,        offsetFromSlotMs: null },
-  { id: "step_wa_15min",     channel: "whatsapp", offsetFromCreatedMs: 15 * 60_000,       offsetFromSlotMs: null },
-  { id: "step_email_2h",     channel: "email",    offsetFromCreatedMs: 2 * 3600_000,      offsetFromSlotMs: null },
-  { id: "step_email_manana", channel: "email",    offsetFromCreatedMs: null,              offsetFromSlotMs: -24 * 3600_000 },
-  { id: "step_wa_manana",    channel: "whatsapp", offsetFromCreatedMs: null,              offsetFromSlotMs: -24 * 3600_000 },
-  { id: "step_wa_en2h",      channel: "whatsapp", offsetFromCreatedMs: null,              offsetFromSlotMs: -2 * 3600_000 },
-  { id: "step_push_en2h",    channel: "push",     offsetFromCreatedMs: null,              offsetFromSlotMs: -2 * 3600_000 },
-  { id: "step_push_meet",    channel: "push",     offsetFromCreatedMs: null,              offsetFromSlotMs: -15 * 60_000 },
+  { id: "step_email_2min",         channel: "email",    offsetFromCreatedMs: 2 * 60_000,        offsetFromSlotMs: null },
+  { id: "step_email_descarga_app", channel: "email",    offsetFromCreatedMs: 30 * 60_000,       offsetFromSlotMs: null },
+  { id: "step_wa_15min",           channel: "whatsapp", offsetFromCreatedMs: 15 * 60_000,       offsetFromSlotMs: null },
+  { id: "step_email_2h",           channel: "email",    offsetFromCreatedMs: 2 * 3600_000,      offsetFromSlotMs: null },
+  { id: "step_email_acceso_app",   channel: "email",    offsetFromCreatedMs: null,              offsetFromSlotMs: null, offsetFromLoginMs: 30 * 60_000 },
+  { id: "step_email_manana",       channel: "email",    offsetFromCreatedMs: null,              offsetFromSlotMs: -24 * 3600_000 },
+  { id: "step_wa_manana",          channel: "whatsapp", offsetFromCreatedMs: null,              offsetFromSlotMs: -24 * 3600_000 },
+  { id: "step_email_atencion",     channel: "email",    offsetFromCreatedMs: null,              offsetFromSlotMs: -6 * 3600_000 },
+  { id: "step_wa_en2h",            channel: "whatsapp", offsetFromCreatedMs: null,              offsetFromSlotMs: -2 * 3600_000 },
+  { id: "step_push_en2h",          channel: "push",     offsetFromCreatedMs: null,              offsetFromSlotMs: -2 * 3600_000 },
+  { id: "step_push_meet",          channel: "push",     offsetFromCreatedMs: null,              offsetFromSlotMs: -15 * 60_000 },
 ];
+
+/**
+ * Único step permitido específicamente en modo logged_not_confirmed. Además
+ * es el único que se ancla a `app_login_at` (recordatorio 30min post-login).
+ *
+ * En modo logged_not_confirmed, TODOS los demás steps se saltan (WA, push,
+ * email agresivo, email descarga). Regla implementada en `stepAllowedForMode`.
+ */
+const STEP_ONLY_WHEN_LOGGED: StepId = "step_email_acceso_app";
+
+type ReservaMode = "confirmed" | "logged_not_confirmed" | "ametralladora_completa";
+
+function classifyReserva(r: ReservaRow): ReservaMode {
+  if (r.confirmed_at) return "confirmed";
+  if (r.app_login_at) return "logged_not_confirmed";
+  return "ametralladora_completa";
+}
+
+/**
+ * Decide si un step está permitido para el modo actual de la fila.
+ * Se aplica ANTES de comprobar el timing en el loop principal Y también
+ * defensivamente en cada handler (por si el modo cambió mid-run).
+ */
+function stepAllowedForMode(stepId: StepId, mode: ReservaMode): boolean {
+  if (mode === "confirmed") return false;
+  if (mode === "logged_not_confirmed") return stepId === STEP_ONLY_WHEN_LOGGED;
+  // ametralladora_completa: todo permitido excepto el step exclusivo de login
+  return stepId !== STEP_ONLY_WHEN_LOGGED;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -107,6 +161,8 @@ interface ReservaRow {
   created_at: string | null;
   meet_url: string | null;
   sent_steps: string[] | null;
+  /** ISO timestamp de la primera apertura de la app tras la reserva. */
+  app_login_at: string | null;
 }
 
 interface StepAction {
@@ -139,8 +195,22 @@ function formatSlotLocal(iso: string | null): string {
   }).format(new Date(ms));
 }
 
-/** Devuelve true si el step ya debería haberse disparado según los offsets. */
-function stepIsDue(step: StepDef, createdMs: number, slotMs: number, nowMs: number): boolean {
+/**
+ * Devuelve true si el step ya debería haberse disparado según los offsets.
+ * Los steps anclados a `app_login_at` requieren que loginMs sea finito — si el
+ * paciente aún no ha entrado a la app, nunca se marcan como due.
+ */
+function stepIsDue(
+  step: StepDef,
+  createdMs: number,
+  slotMs: number,
+  nowMs: number,
+  loginMs: number,
+): boolean {
+  if (step.offsetFromLoginMs !== null && step.offsetFromLoginMs !== undefined) {
+    if (!Number.isFinite(loginMs)) return false;
+    return nowMs >= loginMs + step.offsetFromLoginMs;
+  }
   if (step.offsetFromCreatedMs !== null) {
     return nowMs >= createdMs + step.offsetFromCreatedMs;
   }
@@ -169,6 +239,16 @@ function buildEmailProps(r: ReservaRow): BienvenidaEmailProps {
     angulo: r.angulo ?? "",
     psiName: r.psi_name ?? "tu psicóloga",
     slotLocal: formatSlotLocal(r.slot_iso),
+    confirmUrl: `${SITE}/app/bienvenida/confirmar?a=${r.appointment_id}`,
+  };
+}
+
+/** Props para los emails "app-only" (descarga + acceso). */
+function buildAppEmailProps(r: ReservaRow): BienvenidaAppEmailProps {
+  const displayName = r.name ?? r.full_name ?? "";
+  return {
+    name: displayName,
+    angulo: r.angulo ?? "",
     confirmUrl: `${SITE}/app/bienvenida/confirmar?a=${r.appointment_id}`,
   };
 }
@@ -296,17 +376,45 @@ async function dispatchStep(action: StepAction): Promise<StepResult> {
 
   try {
     if (step.channel === "email") {
-      const props = buildEmailProps(reserva);
+      // Segundo gate defensivo: recomprobamos el modo por si cambió mid-run.
+      const mode = classifyReserva(reserva);
+      if (!stepAllowedForMode(step.id, mode)) {
+        return { ...base, detail: `blocked_by_mode:${mode}` };
+      }
+
       let rendered: RenderedEmail;
       switch (step.id) {
         case "step_email_2min":
-          rendered = emailBienvenidaConfirma2min(props);
+          rendered = emailBienvenidaConfirma2min(buildEmailProps(reserva));
           break;
         case "step_email_2h":
-          rendered = emailBienvenidaRecordatorio2h(props);
+          rendered = emailBienvenidaRecordatorio2h(buildEmailProps(reserva));
           break;
         case "step_email_manana":
-          rendered = emailBienvenidaManana(props);
+          rendered = emailBienvenidaManana(buildEmailProps(reserva));
+          break;
+        case "step_email_descarga_app":
+          // Salvaguarda: si mientras tanto el paciente entró a la app, no
+          // enviamos el push a descargarla (redundante).
+          if (reserva.app_login_at) {
+            return { ...base, ok: true, detail: "skip_already_logged_in" };
+          }
+          rendered = emailBienvenidaDescargaApp(buildAppEmailProps(reserva));
+          break;
+        case "step_email_acceso_app":
+          // Solo tiene sentido si sigue logueado y sin confirmar.
+          if (!reserva.app_login_at) {
+            return { ...base, detail: "skip_no_app_login" };
+          }
+          rendered = emailBienvenidaAccesoApp(buildAppEmailProps(reserva));
+          break;
+        case "step_email_atencion":
+          rendered = emailBienvenidaAtencionAgresivo({
+            name: reserva.name ?? reserva.full_name ?? "",
+            psiName: reserva.psi_name ?? "tu psicóloga",
+            slotLocal: formatSlotLocal(reserva.slot_iso),
+            confirmUrl: `${SITE}/app/bienvenida/confirmar?a=${reserva.appointment_id}`,
+          });
           break;
         default:
           return { ...base, detail: "unknown_email_step" };
@@ -316,6 +424,10 @@ async function dispatchStep(action: StepAction): Promise<StepResult> {
     }
 
     if (step.channel === "whatsapp") {
+      const mode = classifyReserva(reserva);
+      if (!stepAllowedForMode(step.id, mode)) {
+        return { ...base, detail: `blocked_by_mode:${mode}` };
+      }
       const props = buildWaProps(reserva);
       let descriptor: WaTemplateDescriptor;
       switch (step.id) {
@@ -336,6 +448,10 @@ async function dispatchStep(action: StepAction): Promise<StepResult> {
     }
 
     if (step.channel === "push") {
+      const mode = classifyReserva(reserva);
+      if (!stepAllowedForMode(step.id, mode)) {
+        return { ...base, detail: `blocked_by_mode:${mode}` };
+      }
       const r = await sendPushStep(reserva, step.id);
       return { ...base, ok: r.ok, detail: r.detail };
     }
@@ -361,7 +477,7 @@ export async function GET(req: NextRequest) {
   // (con 30 min de gracia para no cortar el push T-15min si el cron tarda).
   const { data: reservas, error } = await sb
     .from("bienvenida_reservas")
-    .select("id, appointment_id, email, name, full_name, phone, angulo, psi_name, slot_iso, confirmed_at, created_at, meet_url, sent_steps")
+    .select("id, appointment_id, email, name, full_name, phone, angulo, psi_name, slot_iso, confirmed_at, created_at, meet_url, sent_steps, app_login_at")
     .is("confirmed_at", null)
     .gt("slot_iso", graceCutoffIso)
     .order("slot_iso", { ascending: true })
@@ -382,14 +498,22 @@ export async function GET(req: NextRequest) {
     const r = raw as ReservaRow;
     const createdMs = r.created_at ? Date.parse(r.created_at) : NaN;
     const slotMs = r.slot_iso ? Date.parse(r.slot_iso) : NaN;
+    const loginMs = r.app_login_at ? Date.parse(r.app_login_at) : NaN;
     if (!Number.isFinite(createdMs) || !Number.isFinite(slotMs)) continue;
+
+    // Gate 1 (query ya excluye confirmed_at != null): recomprobamos por si acaso.
+    const mode = classifyReserva(r);
+    if (mode === "confirmed") continue;
+
     const alreadySent = new Set(r.sent_steps ?? []);
 
     // Recorrer cadencia y disparar todos los steps vencidos aún no enviados.
     // Nota: en cada tick del cron pueden ser 0, 1 o varios (por si perdemos ejecuciones).
     for (const step of CADENCE) {
       if (alreadySent.has(step.id)) continue;
-      if (!stepIsDue(step, createdMs, slotMs, nowMs)) continue;
+      // Gate 2: filtrar por modo antes de mirar timing (evita trabajo inútil).
+      if (!stepAllowedForMode(step.id, mode)) continue;
+      if (!stepIsDue(step, createdMs, slotMs, nowMs, loginMs)) continue;
 
       const res = await dispatchStep({ reserva: r, step });
       results.push(res);
