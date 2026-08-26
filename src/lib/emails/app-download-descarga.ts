@@ -92,7 +92,7 @@ export function appDownloadDescargaEmail({ firstName }: Props): { subject: strin
         ${para("No hace falta suscripción. No hace falta reservar sesión. La app está ahí para los días buenos y los raros — con o sin proceso con una psicóloga.")}
         ${ctaBadges()}
         ${reassure("Android e iOS · Sin coste · Sin suscripción · Cancela cuando quieras")}
-        ${para("<strong>+8.000 personas</strong> ya la usan · <strong>4,6★</strong> en Google Play.")}
+        ${para("<strong>+8.000 personas</strong> ya la usan · <strong>4,9★</strong> en Google Play.")}
         ${signature()}
         ${whatsappNote()}
       `,

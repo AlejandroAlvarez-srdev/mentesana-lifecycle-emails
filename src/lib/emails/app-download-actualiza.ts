@@ -96,7 +96,7 @@ export function appDownloadActualizaEmail({ firstName }: Props): { subject: stri
         ${box(INSTRUCTIONS)}
         ${ctaBadges()}
         ${reassure("Android e iOS · Gratis · Sin suscripción")}
-        ${para("<strong>+8.000 personas</strong> la usan · <strong>4,6★</strong> · más de <strong>200 valoraciones nuevas</strong> este trimestre.")}
+        ${para("<strong>+8.000 personas</strong> la usan · <strong>4,9★</strong> · más de <strong>200 valoraciones nuevas</strong> este trimestre.")}
         ${signature()}
         ${whatsappNote()}
       `,

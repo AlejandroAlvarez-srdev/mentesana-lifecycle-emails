@@ -65,7 +65,7 @@ export function emailLayout({ title, preheader = "", content }: LayoutOptions): 
           <td style="background:#FFFAF2;padding:32px;text-align:center;border-top:1px solid rgba(0,0,0,0.04);">
             <p style="margin:0 0 8px;font-family:'Caveat',cursive;font-size:22px;color:#6A178C;">Cuida tu mente, cuida tu vida</p>
             <p style="margin:0 0 16px;font-size:13px;color:#6A178C;font-weight:600;">Mente Sana Psicología</p>
-            <p style="margin:0 0 16px;font-size:11px;color:#1a0a1f;opacity:0.5;line-height:1.6;">150+ psicólogas certificadas · +8.000 pacientes acompañadas<br>4.6/5 valoración media · España</p>
+            <p style="margin:0 0 16px;font-size:11px;color:#1a0a1f;opacity:0.5;line-height:1.6;">150+ psicólogas certificadas · +8.000 pacientes acompañadas<br>4.9/5 valoración media · España</p>
             <div style="margin:16px 0;">
               <a href="https://wa.me/34XXXXXXXXX" style="color:#6A178C;text-decoration:none;font-size:11px;margin:0 8px;">WhatsApp</a>
               <span style="color:#6A178C;opacity:0.3;">·</span>

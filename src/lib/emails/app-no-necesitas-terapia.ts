@@ -108,7 +108,7 @@ export function appNoNecesitasTerapiaEmail({ firstName }: Props): { subject: str
         ${ctaBadges()}
         ${reassure("Android e iOS · Sin coste · Sin suscripción · Cancela cuando quieras")}
         ${quote("Descargué la app pensando que era 'otra más'. Ahora las meditaciones antes de dormir y María a las 2am cuando no puedo pensar bien son parte de mi rutina.", "Elena, 33")}
-        ${para("<strong>+8.000 personas</strong> ya la usan · <strong>4,6★</strong> en Google Play · Mente Sana lleva 6 años acompañando.")}
+        ${para("<strong>+8.000 personas</strong> ya la usan · <strong>4,9★</strong> en Google Play · Mente Sana lleva 6 años acompañando.")}
         ${signature()}
         ${whatsappNote()}
       `,

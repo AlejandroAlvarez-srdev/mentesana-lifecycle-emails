@@ -192,7 +192,7 @@ export function renderOfertaTarifas({ firstName, unsubscribeUrl }: Opts): { subj
               <tr>
                 <td style="padding:20px 0 0;text-align:center;">
                   <p style="margin:0;font-size:13px;line-height:1.8;color:#8a7a90;">
-                    🏛️ 150+ psicólogas colegiadas&nbsp;&nbsp;·&nbsp;&nbsp;👥 +8.000 pacientes<br>⭐ 4.6/5 valoración media&nbsp;&nbsp;·&nbsp;&nbsp;🛡️ Garantía de satisfacción
+                    🏛️ 150+ psicólogas colegiadas&nbsp;&nbsp;·&nbsp;&nbsp;👥 +8.000 pacientes<br>⭐ 4.9/5 valoración media&nbsp;&nbsp;·&nbsp;&nbsp;🛡️ Garantía de satisfacción
                   </p>
                 </td>
               </tr>
