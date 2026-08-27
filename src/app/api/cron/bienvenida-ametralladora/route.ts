@@ -117,6 +117,44 @@ const CADENCE: StepDef[] = [
 ];
 
 /**
+ * Cadencia EFECTIVA = CADENCE hardcodeada + overrides del panel /admin/flujos
+ * (tabla `flow_step_config`). Cualquier fallo (tabla ausente, error, vacío) cae
+ * a la CADENCE hardcodeada → comportamiento idéntico y CERO riesgo de romper el
+ * envío. El panel solo puede: (a) desactivar un paso, (b) cambiar su offset.
+ * El TIPO de ancla (created/slot/login) nunca cambia.
+ */
+interface EffectiveStep extends StepDef { active: boolean }
+
+async function loadEffectiveCadence(): Promise<EffectiveStep[]> {
+  const base: EffectiveStep[] = CADENCE.map((s) => ({ ...s, active: true }));
+  try {
+    const { data, error } = await sb
+      .from("flow_step_config")
+      .select("step_id, active, offset_from_created_ms, offset_from_slot_ms, offset_from_login_ms")
+      .eq("flow", "bienvenida");
+    if (error || !data || data.length === 0) return base;
+    const byId = new Map<string, Record<string, unknown>>(
+      data.map((r: Record<string, unknown>) => [String(r.step_id), r]),
+    );
+    return base.map((s) => {
+      const o = byId.get(s.id);
+      if (!o) return s;
+      const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+      return {
+        ...s,
+        active: o.active !== false,
+        offsetFromCreatedMs: o.offset_from_created_ms != null ? num(o.offset_from_created_ms) : s.offsetFromCreatedMs,
+        offsetFromSlotMs: o.offset_from_slot_ms != null ? num(o.offset_from_slot_ms) : s.offsetFromSlotMs,
+        offsetFromLoginMs: o.offset_from_login_ms != null ? num(o.offset_from_login_ms) : s.offsetFromLoginMs,
+      };
+    });
+  } catch (e) {
+    console.warn("[ametralladora] loadEffectiveCadence fallback:", (e as Error).message);
+    return base;
+  }
+}
+
+/**
  * Único step permitido específicamente en modo logged_not_confirmed. Además
  * es el único que se ancla a `app_login_at` (recordatorio 30min post-login).
  *
@@ -491,6 +529,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, processed: 0, results: [] });
   }
 
+  // Cadencia efectiva (defaults + overrides del panel). Se carga UNA vez por tick.
+  const cadence = await loadEffectiveCadence();
+
   const results: StepResult[] = [];
   const errors: string[] = [];
 
@@ -509,8 +550,10 @@ export async function GET(req: NextRequest) {
 
     // Recorrer cadencia y disparar todos los steps vencidos aún no enviados.
     // Nota: en cada tick del cron pueden ser 0, 1 o varios (por si perdemos ejecuciones).
-    for (const step of CADENCE) {
+    for (const step of cadence) {
       if (alreadySent.has(step.id)) continue;
+      // Gate 0: paso desactivado desde el panel /admin/flujos.
+      if (!step.active) continue;
       // Gate 2: filtrar por modo antes de mirar timing (evita trabajo inútil).
       if (!stepAllowedForMode(step.id, mode)) continue;
       if (!stepIsDue(step, createdMs, slotMs, nowMs, loginMs)) continue;
