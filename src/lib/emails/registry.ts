@@ -133,7 +133,7 @@ export const EMAIL_REGISTRY: RegistryEntry[] = [
   { id: "reactivation_a", label: "Reactivación A", category: "Reactivación / Ofertas", trigger: "Paciente inactivo", channel: "email", editable: "code", render: safe(() => reactivationEmailA(S)) },
   { id: "reactivation_b", label: "Reactivación B", category: "Reactivación / Ofertas", trigger: "Paciente inactivo (v2)", channel: "email", editable: "code", render: safe(() => reactivationEmailB(S)) },
   { id: "reactivation_c", label: "Reactivación C", category: "Reactivación / Ofertas", trigger: "Post-compra inactivo", channel: "email", editable: "code", render: safe(() => reactivationEmailC(S)) },
-  { id: "ceo_descuento", label: "Descuento del CEO", category: "Reactivación / Ofertas", trigger: "Oferta CEO", channel: "email", editable: "code", render: safe(() => ceoDescuentoEmail(S)) },
+  { id: "ceo_descuento", label: "Descuento del CEO", category: "Reactivación / Ofertas", trigger: "Oferta CEO", channel: "email", editable: "code", render: safe(() => ceoDescuentoEmail(1, S)) },
   { id: "oferta_tarifas", label: "Oferta de tarifas", category: "Reactivación / Ofertas", trigger: "Campaña tarifas (cron 2h)", channel: "email", editable: "code", render: safe(() => renderOfertaTarifas(S)) },
   { id: "blog_reactivation", label: "Reactivación blog", category: "Reactivación / Ofertas", trigger: "Lector de blog", channel: "email", editable: "code", render: safe(() => blogReactivationEmail(S)) },
   { id: "regalo_ceo", label: "Regalo CEO (diag. cortesía)", category: "Reactivación / Ofertas", trigger: "Regalo diagnóstico", channel: "email", editable: "code", render: safe(() => regaloCeoDiagnosticoGratisEmail(S)) },
@@ -151,8 +151,8 @@ export const EMAIL_REGISTRY: RegistryEntry[] = [
   { id: "contact_received", label: "Contacto recibido", category: "Operacionales", trigger: "Formulario de contacto", channel: "email", editable: "code", render: safe(() => contactReceivedEmail(S)) },
   { id: "ebook_delivery", label: "Entrega de ebook", category: "Operacionales", trigger: "Descarga de ebook", channel: "email", editable: "code", render: safe(() => ebookDeliveryEmail(S)) },
   { id: "review_request", label: "Petición de reseña", category: "Operacionales", trigger: "Tras la sesión (cron 30min)", channel: "email", editable: "code", render: safe(() => reviewRequestEmail(S)) },
-  { id: "welcome_newsletter", label: "Bienvenida newsletter", category: "Operacionales", trigger: "Alta newsletter", channel: "email", editable: "code", render: safe(() => welcomeNewsletterEmail(S)) },
-  { id: "agent_suggested", label: "Email sugerido (agente)", category: "Operacionales", trigger: "Sugerencia CRM", channel: "email", editable: "code", render: safe(() => renderSuggestedEmail(S)) },
+  { id: "welcome_newsletter", label: "Bienvenida newsletter", category: "Operacionales", trigger: "Alta newsletter", channel: "email", editable: "code", render: safe(() => welcomeNewsletterEmail()) },
+  { id: "agent_suggested", label: "Email sugerido (agente)", category: "Operacionales", trigger: "Sugerencia CRM", channel: "email", editable: "code", render: safe(() => ({ subject: "Email sugerido (agente)", html: renderSuggestedEmail(S) })) },
 ];
 
 export function findEntry(id: string): RegistryEntry | undefined {
