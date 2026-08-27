@@ -5,7 +5,8 @@
 
 interface Attachment {
   name: string;
-  content: string; // base64
+  content?: string; // base64
+  url?: string;     // alternativa: adjuntar por URL (Brevo lo descarga)
 }
 
 interface SendEmailOptions {
