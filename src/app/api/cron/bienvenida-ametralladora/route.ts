@@ -41,6 +41,7 @@ import {
   emailBienvenidaDescargaApp,
   emailBienvenidaAccesoApp,
   emailBienvenidaAtencionAgresivo,
+  emailBienvenidaHuecoRiesgo12h,
   type BienvenidaEmailProps,
   type BienvenidaAppEmailProps,
   type RenderedEmail,
@@ -80,6 +81,7 @@ type StepId =
   | "step_email_acceso_app"
   | "step_email_manana"
   | "step_wa_manana"
+  | "step_email_riesgo_12h"
   | "step_email_atencion"
   | "step_wa_en2h"
   | "step_push_en2h"
@@ -110,6 +112,7 @@ const CADENCE: StepDef[] = [
   { id: "step_email_acceso_app",   channel: "email",    offsetFromCreatedMs: null,              offsetFromSlotMs: null, offsetFromLoginMs: 30 * 60_000 },
   { id: "step_email_manana",       channel: "email",    offsetFromCreatedMs: null,              offsetFromSlotMs: -24 * 3600_000 },
   { id: "step_wa_manana",          channel: "whatsapp", offsetFromCreatedMs: null,              offsetFromSlotMs: -24 * 3600_000 },
+  { id: "step_email_riesgo_12h",   channel: "email",    offsetFromCreatedMs: null,              offsetFromSlotMs: -12 * 3600_000 },
   { id: "step_email_atencion",     channel: "email",    offsetFromCreatedMs: null,              offsetFromSlotMs: -6 * 3600_000 },
   { id: "step_wa_en2h",            channel: "whatsapp", offsetFromCreatedMs: null,              offsetFromSlotMs: -2 * 3600_000 },
   { id: "step_push_en2h",          channel: "push",     offsetFromCreatedMs: null,              offsetFromSlotMs: -2 * 3600_000 },
@@ -445,6 +448,14 @@ async function dispatchStep(action: StepAction): Promise<StepResult> {
             return { ...base, detail: "skip_no_app_login" };
           }
           rendered = emailBienvenidaAccesoApp(buildAppEmailProps(reserva));
+          break;
+        case "step_email_riesgo_12h":
+          rendered = emailBienvenidaHuecoRiesgo12h({
+            name: reserva.name ?? reserva.full_name ?? "",
+            psiName: reserva.psi_name ?? "tu psicóloga",
+            slotLocal: formatSlotLocal(reserva.slot_iso),
+            confirmUrl: `${SITE}/app/bienvenida/confirmar?a=${reserva.appointment_id}`,
+          });
           break;
         case "step_email_atencion":
           rendered = emailBienvenidaAtencionAgresivo({
