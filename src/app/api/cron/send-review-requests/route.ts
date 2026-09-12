@@ -18,6 +18,10 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const DIAG_IDS = [8, 11];
+// B2B (empresas.mentesanapsicologia.com): reuniones comerciales de marca blanca/marketing/software y las sesiones de los
+// clientes marca blanca (categoría 4 "B2B Empresas"). NO son pacientes de Mente Sana → nunca pedirles review.
+const B2B_IDS = [12, 13, 301, 302];
+const B2B_CATEGORY_ID = 4;
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -26,6 +30,7 @@ export async function GET(req: NextRequest) {
   const ab = ameliaTable("appointments");
   const cb = ameliaTable("customer_bookings");
   const ub = ameliaTable("users");
+  const sv = ameliaTable("services");
 
   // Sesiones approved que terminaron hace 2-24h
   const candidates = await ameliaQuery<any>(
@@ -36,8 +41,11 @@ export async function GET(req: NextRequest) {
      FROM ${ab} a JOIN ${cb} cb ON cb.appointmentId = a.id
      JOIN ${ub} c ON c.id = cb.customerId AND c.type='customer'
      JOIN ${ub} u ON u.id = a.providerId AND u.type='provider'
+     LEFT JOIN ${sv} s ON s.id = a.serviceId
      WHERE cb.status = 'approved'
        AND a.serviceId NOT IN (${DIAG_IDS.join(",")})
+       AND a.serviceId NOT IN (${B2B_IDS.join(",")})
+       AND COALESCE(s.categoryId, 0) <> ${B2B_CATEGORY_ID}
        AND a.bookingStart BETWEEN DATE_SUB(NOW(), INTERVAL 24 HOUR) AND DATE_SUB(NOW(), INTERVAL 2 HOUR)
        AND c.email IS NOT NULL AND c.email != ''
      LIMIT 100`,
