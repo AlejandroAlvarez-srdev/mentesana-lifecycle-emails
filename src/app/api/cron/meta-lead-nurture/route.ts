@@ -31,7 +31,22 @@ export async function GET(req: NextRequest) {
       .limit(200);
     if (!leads || leads.length === 0) continue;
 
+    // FIX spam "haz tu test": el nurture invita a HACER el test. Si el lead YA lo
+    // hizo (existe en diagnostico_tests, con o sin pago), NO se le puede pedir que
+    // lo haga → dejaba de spamear "no has hecho el test" a quien sí lo había hecho.
+    // (a los que hicieron el test y no pagaron los recoge el flujo lead_sin_compra).
+    const didTest = new Set<string>();
+    const leadEmails = leads.map((l) => l.email!).filter(Boolean);
+    if (leadEmails.length) {
+      const { data: dt } = await sb.from("diagnostico_tests").select("user_email").in("user_email", leadEmails);
+      for (const d of (dt ?? []) as { user_email: string | null }[]) {
+        if (d.user_email) didTest.add(String(d.user_email).toLowerCase().trim());
+      }
+    }
+
     for (const lead of leads) {
+      // Ya hizo el test → no invitarle a hacerlo.
+      if (lead.email && didTest.has(lead.email.toLowerCase().trim())) continue;
       // Ya enviado este step?
       const { data: existing } = await sb.from("meta_lead_nurture_log").select("id").eq("lead_id", lead.id).eq("step", step).maybeSingle();
       if (existing) continue;
