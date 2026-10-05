@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   blogClient, resolveCustomer, buildOrder, renderResumenPDF, uploadResumenPDF,
 } from "@/lib/resumen/generate";
+import { notificarResumenPendiente } from "@/lib/resumen/notify";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -81,6 +82,11 @@ export async function GET(req: NextRequest) {
       }).eq("id", o.id);
       generated++;
       log.push(`generado (${built.alert ? "needs_review" : "ok"}): ${o.patient_email}`);
+      // Avisar a la psicóloga: sin esto el resumen se queda en el panel sin que nadie lo vea.
+      try {
+        const n = await notificarResumenPendiente(sb, { id: o.id, provider_id: built.provider_id, patient_name: o.patient_name, patient_email: o.patient_email, status: built.alert ? "needs_review" : "pending_approval", session_date: built.session_date, alert_reason: built.alert_reason }, "nuevo");
+        log.push(`aviso psi: ${n.psi ?? "sin email"} (${n.emails} emails)`);
+      } catch (e) { log.push(`aviso psi falló: ${e instanceof Error ? e.message : e}`); }
     } catch (e) {
       await sb.from("resumen_orders").update({
         status: "error", error: e instanceof Error ? e.message : String(e),
@@ -90,5 +96,18 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, generated, detected: (pays ?? []).length, log });
+  // Recordatorio diario de los que siguen sin aprobar (>24h generados, sin aviso en 24h).
+  let recordatorios = 0;
+  try {
+    const hace24h = new Date(Date.now() - 24 * 3600_000).toISOString();
+    const { data: stuck } = await sb.from("resumen_orders")
+      .select("id, provider_id, patient_name, patient_email, status, session_date, alert_reason, generated_at, last_reminder_at")
+      .in("status", ["pending_approval", "needs_review"]).lt("generated_at", hace24h)
+      .or(`last_reminder_at.is.null,last_reminder_at.lt.${hace24h}`).limit(10);
+    for (const o of stuck ?? []) {
+      try { await notificarResumenPendiente(sb, o, "recordatorio"); recordatorios++; } catch (e) { log.push(`recordatorio falló ${o.patient_email}: ${e instanceof Error ? e.message : e}`); }
+    }
+  } catch (e) { log.push(`recordatorios: ${e instanceof Error ? e.message : e}`); }
+
+  return NextResponse.json({ ok: true, generated, recordatorios, detected: (pays ?? []).length, log });
 }
