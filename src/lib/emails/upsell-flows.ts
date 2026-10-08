@@ -1,4 +1,5 @@
 import * as T from "./upsell-post-sesion";
+import type { CopyMap } from "./upsell-post-sesion";
 
 /**
  * Los 4 FLUJOS de correos de upsell, uno por tipo de paquete. Cada flujo es la
@@ -25,6 +26,7 @@ export type FlowTrigger =
 export interface FlowCtx {
   name?: string;
   psychologistName?: string | null;
+  ov?: CopyMap; // overrides de copy (editados en el panel)
 }
 
 export interface FlowStep {
