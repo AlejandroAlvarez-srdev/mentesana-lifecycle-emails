@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { ameliaQuery, ameliaTable } from "@/lib/amelia-db";
+import { automationTags } from "@/lib/flujos-metrics";
 import { sendEmail } from "@/lib/emails/send";
 import { reviewRequestEmail } from "@/lib/emails/review-request";
 import { randomBytes } from "crypto";
@@ -85,7 +86,7 @@ export async function GET(req: NextRequest) {
       token,
       session_date: c.session_date,
     });
-    const send = await sendEmail({ to: c.customer_email, subject, html, toName: c.customer_first ?? undefined });
+    const send = await sendEmail({ tags: automationTags("resenas"), to: c.customer_email, subject, html, toName: c.customer_first ?? undefined });
     if (send.success) {
       await sb.from("session_review_requests").update({ sent_at: new Date().toISOString() }).eq("token", token);
       sent++;

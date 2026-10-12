@@ -33,6 +33,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { automationTags } from "@/lib/flujos-metrics";
 import { sendEmail } from "@/lib/emails/send";
 import {
   emailBienvenidaConfirma2min,
@@ -309,6 +310,7 @@ function buildWaProps(r: ReservaRow): BienvenidaWaProps {
 async function sendEmailStep(
   r: ReservaRow,
   rendered: RenderedEmail,
+  stepId: StepId,
 ): Promise<{ ok: boolean; detail?: string }> {
   if (!r.email) return { ok: false, detail: "no_email" };
   const res = await sendEmail({
@@ -316,6 +318,7 @@ async function sendEmailStep(
     toName: r.name ?? r.full_name ?? undefined,
     subject: rendered.subject,
     html: rendered.html,
+    tags: automationTags("bienvenida", stepId),
   });
   return { ok: res.success, detail: res.error };
 }
@@ -468,7 +471,7 @@ async function dispatchStep(action: StepAction): Promise<StepResult> {
         default:
           return { ...base, detail: "unknown_email_step" };
       }
-      const r = await sendEmailStep(reserva, rendered);
+      const r = await sendEmailStep(reserva, rendered, step.id);
       return { ...base, ok: r.ok, detail: r.detail };
     }
 

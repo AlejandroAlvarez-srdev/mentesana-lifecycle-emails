@@ -3,6 +3,7 @@
 // + brevo_message_id o error si falla.
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { automationTags } from "@/lib/flujos-metrics";
 import { sendEmail } from "@/lib/emails/send";
 import { appChatNotificationEmail } from "@/lib/emails/app-chat-notification";
 
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
       // entrante de hola@. Mantenemos fromName con el nombre del agente
       // para personalización visual (el remitente aparece humanizado).
       const fromName = row.agent_name?.trim() || undefined;
-      const res = await sendEmail({
+      const res = await sendEmail({ tags: automationTags("chat_app"),
         to: row.user_email,
         toName: row.user_name ?? undefined,
         subject,

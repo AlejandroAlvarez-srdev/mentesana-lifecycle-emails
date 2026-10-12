@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { ameliaQuery, ameliaTable } from "@/lib/amelia-db";
+import { automationTags } from "@/lib/flujos-metrics";
 import { sendEmail } from "@/lib/emails/send";
 import { diagnosticoTestReminderEmail } from "@/lib/emails/diagnostico-test-reminder";
 
@@ -134,7 +135,7 @@ export async function GET(req: NextRequest) {
       appointmentAt: c.booking_start,
     });
 
-    const send = await sendEmail({
+    const send = await sendEmail({ tags: automationTags("diagnostico_test"),
       to: c.customer_email!,
       toName: c.customer_first ?? undefined,
       subject,

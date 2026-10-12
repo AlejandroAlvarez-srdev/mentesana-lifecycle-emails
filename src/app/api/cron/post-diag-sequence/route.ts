@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { ameliaQuery, ameliaTable } from "@/lib/amelia-db";
+import { automationTags } from "@/lib/flujos-metrics";
 import { sendEmail } from "@/lib/emails/send";
 import { emailLayout } from "@/lib/emails/layout";
 
@@ -137,7 +138,7 @@ export async function GET(req: NextRequest) {
 
       // Render template con variables + tracking links
       const { subject, html } = renderTemplate(tpl, cand);
-      const res = await sendEmail({ to: cand.email, subject, html, toName: cand.first_name });
+      const res = await sendEmail({ to: cand.email, subject, html, toName: cand.first_name, tags: automationTags("post_diag", step) });
       const logRow: any = {
         customer_id: cand.customer_id,
         appointment_id: cand.appointment_id,
