@@ -94,10 +94,13 @@ const sesionesTxt = (n: number) => (n === 1 ? "1 sesión" : `${n} sesiones`);
 
 function mkVars(bono: BonoInfo | null, remaining: number, nowMs: number, step?: number): Record<string, string> {
   const dias = bono?.endMs != null ? Math.max(0, Math.ceil((bono.endMs - nowMs) / DAY)) : 0;
+  // Los paquetes de Amelia se llaman "Bono Felicidad", "Bono Compañía"…: {bono} ya incluye la palabra
+  // "bono" (se antepone si el nombre no la trae) para que las plantillas digan "tu {bono}".
+  const nombreBono = (bono?.packageName ?? "").trim();
   return {
     sesiones: String(remaining),
     sesiones_txt: sesionesTxt(remaining),
-    bono: bono?.packageName || "bono",
+    bono: !nombreBono ? "bono" : /^bono\b/i.test(nombreBono) ? nombreBono : `bono ${nombreBono}`,
     caduca: fmtFecha(bono?.endMs ?? null),
     dias: String(dias),
     psicologa: bono?.providerName?.trim() || "tu psicóloga",
