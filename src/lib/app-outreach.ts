@@ -1,4 +1,6 @@
-// Plantillas AUTOMÁTICAS por el chat de la app según la situación de cada paciente.
+// Plantillas AUTOMÁTICAS según la situación de cada paciente. Dos canales comparten este motor:
+//   • chat de la app (este archivo: buildOutreachPlan / runOutreach, plantillas support_message_templates)
+//   • WhatsApp (src/lib/wa-outreach.ts: mismas reglas, plantillas aprobadas en Meta rotando versiones)
 // Reglas (CTO, 17-oct-2026):
 //   • Bono activo + psicóloga que ya no está (provider Amelia no 'visible')  → "psi_baja" (saludo).
 //   • Bono activo con ≤2 sesiones por usar (0, 1 o 2)                          → "renovacion".
@@ -7,13 +9,13 @@
 //   • Bono vencido (≤60 días) y sin otro activo                                → "bono_vencido" (renovar).
 //   • Pagó el 9,99 (3-60 días) y nunca tuvo bono ni terapia                    → "remark" paso 1→6, un paso por día.
 //   • NUNCA a quien pidió devolución/reclamó/dijo que no le interesa o que no le escribamos
-//     (patrones en sus mensajes de la app, bajas de marketing y la lista manual app_outreach_optout).
-//   • Nada si recibió una plantilla (o cualquier mensaje del equipo en la app) hace <3 días; la misma
-//     regla no se repite antes de 14 días; el saludo 19,99 solo se manda una vez.
-// Una sola plantilla por paciente y pasada. buildOutreachPlan() calcula el plan (sin enviar) y
-// runOutreach() lo envía con startSupportChat (chat de la app + push + email) y lo registra en
-// BLOG app_outreach_log (+ un resumen en support_bulk_sends para que cuente como envío masivo).
-// Las plantillas viven en BLOG support_message_templates (category 'automatico', slug auto-*).
+//     (patrones en sus mensajes, bajas de marketing y la lista manual app_outreach_optout).
+//   • Nada si recibió una plantilla (o cualquier mensaje del equipo, en la app O en WhatsApp) hace <3 días;
+//     la misma regla no se repite antes de 14 días EN EL MISMO CANAL (WhatsApp puede llegar a quien ya recibió
+//     la versión de la app pasados los 3 días); el saludo 19,99 solo se manda una vez. El remark sigue en el
+//     canal donde empezó.
+// Una sola plantilla por paciente y pasada. Todo envío (ambos canales) se registra en BLOG app_outreach_log
+// (channel app|wa), que es lo que sostiene la cadencia y los pasos del remark.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AgentProfile } from "@/lib/agent-auth";
@@ -35,6 +37,8 @@ export const OUTREACH_CONFIG = {
   logLookbackDays: 90,
 };
 export type OutreachConfig = typeof OUTREACH_CONFIG;
+export type OutreachChannel = "app" | "wa";
+export const CHANNEL_LABEL: Record<OutreachChannel, string> = { app: "la app", wa: "WhatsApp" };
 
 export type OutreachRule = "psi_baja" | "renovacion" | "caducidad" | "saludo_1999" | "bono_vencido" | "remark";
 export const OUTREACH_RULES: OutreachRule[] = ["psi_baja", "renovacion", "caducidad", "saludo_1999", "bono_vencido", "remark"];
@@ -46,6 +50,7 @@ export const RULE_LABEL: Record<OutreachRule, string> = {
   bono_vencido: "Bono vencido · renovar",
   remark: "Remark 9,99 sin bono (1→6)",
 };
+export const RULE_ORDER: Record<OutreachRule, number> = { psi_baja: 0, renovacion: 1, caducidad: 2, bono_vencido: 3, saludo_1999: 4, remark: 5 };
 export const AUTO_TEMPLATE_CATEGORY = "automatico";
 export function templateSlugFor(rule: OutreachRule, step?: number | null): string {
   return rule === "remark" ? `auto-remark-${step ?? 1}` : `auto-${rule.replace(/_/g, "-")}`;
@@ -66,10 +71,12 @@ export type BonoInfo = {
   nextSessionMs: number | null;
 };
 
+export type OutreachLogEntry = { rule: OutreachRule; step: number | null; sentMs: number; channel: OutreachChannel };
+
 export type PatientSnapshot = {
   email: string;
   nombre: string | null;
-  phone: string | null;
+  phone: string | null;           // normalizado (dígitos con prefijo país)
   hasApp: boolean;
   bonos: BonoInfo[];              // aprobados: vigentes o caducados hace ≤ vencidoDias
   hasAnyBono: boolean;            // alguna vez tuvo un bono aprobado en Amelia
@@ -77,9 +84,9 @@ export type PatientSnapshot = {
   offered1999: boolean;           // sesión extra ya ofrecida (upsell_ofrecidos) o ya comprada
   diagPaidMs: number | null;      // último pago del 9,99
   hasTherapyPayment: boolean;     // pago ≥40€ en Stripe o terapia pagada en la app
-  outreach: { rule: OutreachRule; step: number | null; sentMs: number }[]; // envíos ok del motor
-  lastAgentMsgMs: number | null;  // último mensaje de agente en el chat de la app (cualquiera)
-  lastUserMsgMs: number | null;   // último mensaje del paciente en el chat de la app
+  outreach: OutreachLogEntry[];   // envíos ok del motor (ambos canales)
+  lastAgentMsgMs: number | null;  // último mensaje del equipo (app o WhatsApp)
+  lastUserMsgMs: number | null;   // último mensaje del paciente (app o WhatsApp)
   waitingForAgent: boolean;       // tiene mensaje sin responder → lo lleva el equipo
   excludedReason: string | null;  // devolución/reclamación/no interesa/no contactar/baja
 };
@@ -88,8 +95,8 @@ export type Decision = { rule: OutreachRule; step: number | null; templateSlug: 
 export type Skip = { skip: string; rule?: OutreachRule };
 export const isDecision = (d: Decision | Skip): d is Decision => (d as Skip).skip === undefined;
 
-const madridDay = (ms: number) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
-const fmtFecha = (ms: number | null) => (ms == null ? "" : new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(ms)));
+export const madridDay = (ms: number) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+export const fmtFecha = (ms: number | null) => (ms == null ? "" : new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(ms)));
 const sesionesTxt = (n: number) => (n === 1 ? "1 sesión" : `${n} sesiones`);
 
 function mkVars(bono: BonoInfo | null, remaining: number, nowMs: number, step?: number): Record<string, string> {
@@ -118,17 +125,19 @@ export function renderVars(body: string, vars: Record<string, string>): string {
   });
 }
 
-// Decide la regla de UN paciente. Pura: sin IO, testeable.
-export function decideRule(p: PatientSnapshot, nowMs: number, cfg: OutreachConfig = OUTREACH_CONFIG): Decision | Skip {
+// Decide la regla de UN paciente para un canal. Pura: sin IO, testeable.
+export function decideRule(p: PatientSnapshot, nowMs: number, cfg: OutreachConfig = OUTREACH_CONFIG, channel: OutreachChannel = "app"): Decision | Skip {
   if (p.excludedReason) return { skip: p.excludedReason };
   if (p.waitingForAgent) return { skip: "tiene un mensaje sin responder en el chat (lo lleva el equipo)" };
 
-  const sentWithin = (days: number, rule?: OutreachRule) => p.outreach.some((o) => (!rule || o.rule === rule) && nowMs - o.sentMs < days * DAY);
+  // Cooldown de 3 días: cualquier canal. Repetición de la misma regla (14 días): por canal, para que
+  // WhatsApp pueda llegar a quien ya recibió la versión de la app (y viceversa) pasado el margen.
+  const sentWithin = (days: number, rule?: OutreachRule, sameChannel = false) => p.outreach.some((o) => (!rule || o.rule === rule) && (!sameChannel || o.channel === channel) && nowMs - o.sentMs < days * DAY);
   const recentTeamMsg = p.lastAgentMsgMs != null && nowMs - p.lastAgentMsgMs < cfg.cooldownDays * DAY;
   const recentTemplate = sentWithin(cfg.cooldownDays) || recentTeamMsg;
   const gate = (rule: OutreachRule): Skip | null => {
     if (recentTemplate) return { skip: `plantilla o mensaje del equipo hace menos de ${cfg.cooldownDays} días`, rule };
-    if (sentWithin(cfg.ruleRepeatDays, rule)) return { skip: `ya recibió "${RULE_LABEL[rule]}" hace menos de ${cfg.ruleRepeatDays} días`, rule };
+    if (sentWithin(cfg.ruleRepeatDays, rule, true)) return { skip: `ya recibió "${RULE_LABEL[rule]}" por ${CHANNEL_LABEL[channel]} hace menos de ${cfg.ruleRepeatDays} días`, rule };
     return null;
   };
 
@@ -178,6 +187,7 @@ export function decideRule(p: PatientSnapshot, nowMs: number, cfg: OutreachConfi
     if (last) {
       const lastStep = last.step ?? 1;
       if (lastStep >= cfg.remarkPasos) return { skip: `secuencia remark completada (${cfg.remarkPasos}/${cfg.remarkPasos})`, rule: "remark" };
+      if (last.channel !== channel) return { skip: `secuencia remark en curso por ${CHANNEL_LABEL[last.channel]}`, rule: "remark" };
       if (p.lastUserMsgMs != null && p.lastUserMsgMs > last.sentMs) return { skip: "respondió al remark: lo sigue el equipo", rule: "remark" };
       if (p.lastAgentMsgMs != null && p.lastAgentMsgMs > last.sentMs + 60_000) return { skip: "el equipo ya le escribió después del remark", rule: "remark" };
       if (madridDay(last.sentMs) === madridDay(nowMs)) return { skip: `remark ${lastStep} ya enviado hoy`, rule: "remark" };
@@ -189,7 +199,7 @@ export function decideRule(p: PatientSnapshot, nowMs: number, cfg: OutreachConfi
   return { skip: "sin situación aplicable" };
 }
 
-// ─── Carga de datos (Amelia + BLOG + APP) ───────────────────────────────────
+// ─── Utilidades de carga ────────────────────────────────────────────────────
 
 type AmeliaBonoRow = {
   customer_id: number; firstName: string | null; lastName: string | null; email: string | null; phone: string | null;
@@ -198,24 +208,27 @@ type AmeliaBonoRow = {
   used_count: number | null; last_session: unknown; next_session: unknown;
 };
 
-function toMs(v: unknown): number | null {
+export function toMs(v: unknown): number | null {
   if (v == null || v === "") return null;
   if (v instanceof Date) return v.getTime();
   if (typeof v === "number") return v;
   const s = String(v).trim();
+  // Sin zona (Amelia "YYYY-MM-DD HH:MM:SS" o un timestamp naive de PostgREST) = UTC.
   if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(s)) return Date.parse(s.replace(" ", "T") + "Z");
   const ms = Date.parse(s);
   return Number.isFinite(ms) ? ms : null;
 }
-const normEmail = (e: unknown) => String(e ?? "").trim().toLowerCase();
-function normPhone(raw: string | null | undefined): string {
+export const normEmail = (e: unknown) => String(e ?? "").trim().toLowerCase();
+export function normPhone(raw: string | null | undefined): string {
   let d = (raw ?? "").replace(/\D/g, "").replace(/^00/, "");
   if (d.length === 9) d = "34" + d;
   return d;
 }
-const esInterno = (e: string) => !e.includes("@") || e.endsWith("@mentesanapsicologia.com") || e.startsWith("qa.") || e.includes("@test");
+export const esInterno = (e: string) => !e.includes("@") || e.endsWith("@mentesanapsicologia.com") || e.startsWith("qa.") || e.includes("@test");
+// ISO sin zona para filtrar columnas `timestamp without time zone` (naive = UTC).
+export const naiveIso = (ms: number) => new Date(ms).toISOString().slice(0, 19);
 
-async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>, pageSize = 1000, maxPages = 40): Promise<T[]> {
+export async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>, pageSize = 1000, maxPages = 40): Promise<T[]> {
   const out: T[] = [];
   for (let i = 0; i < maxPages; i++) {
     const from = i * pageSize;
@@ -228,56 +241,34 @@ async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ da
   return out;
 }
 
-// Mensajes del paciente que lo sacan de todo envío automático.
+// Mensajes del paciente que lo sacan de todo envío automático (app y WhatsApp).
 export const EXCLUSION_PATTERNS: { label: string; re: RegExp }[] = [
   { label: "pidió devolución/reembolso", re: /reembols|devoluci[oó]n|devolver(me)? el dinero|devu[eé]lv/i },
   { label: "reclamación", re: /reclamaci|reclamar|denunci|queja formal/i },
   { label: "dijo que no le interesa", re: /no (me|nos) interesa|no estoy interesad|no quiero (seguir|continuar|más sesiones|mas sesiones|contratar|renovar)/i },
   { label: "pidió que no le escribamos", re: /no me escrib|no me contact|no (me )?(env[ií]en|manden|escriban) m[aá]s|dejen? de (escribir|enviar|mandar|contactar)|darme de baja|quiero darme de baja|no quiero recibir/i },
 ];
-const EXCLUSION_OR = "body.ilike.%reembols%,body.ilike.%devoluci%,body.ilike.%devolver%,body.ilike.%devuelv%,body.ilike.%reclama%,body.ilike.%denunci%,body.ilike.%queja formal%,body.ilike.%no me interesa%,body.ilike.%no nos interesa%,body.ilike.%no estoy interesad%,body.ilike.%no quiero seguir%,body.ilike.%no quiero continuar%,body.ilike.%no quiero más sesiones%,body.ilike.%no quiero mas sesiones%,body.ilike.%no quiero contratar%,body.ilike.%no quiero renovar%,body.ilike.%no me escrib%,body.ilike.%no me contact%,body.ilike.%manden más%,body.ilike.%manden mas%,body.ilike.%dejen de%,body.ilike.%deja de escribir%,body.ilike.%darme de baja%,body.ilike.%no quiero recibir%";
+export const EXCLUSION_ILIKE = ["%reembols%", "%devoluci%", "%devolver%", "%devuelv%", "%reclama%", "%denunci%", "%queja formal%", "%no me interesa%", "%no nos interesa%", "%no estoy interesad%", "%no quiero seguir%", "%no quiero continuar%", "%no quiero más sesiones%", "%no quiero mas sesiones%", "%no quiero contratar%", "%no quiero renovar%", "%no me escrib%", "%no me contact%", "%manden más%", "%manden mas%", "%dejen de%", "%deja de escribir%", "%darme de baja%", "%no quiero recibir%"];
+export const exclusionOr = (col: string) => EXCLUSION_ILIKE.map((p) => `${col}.ilike.${p}`).join(",");
 
 export type AutoTemplate = { id: number; slug: string; title: string; body: string; category: string | null; sort_order: number | null };
-
-export type OutreachCandidate = {
-  email: string;
-  nombre: string | null;
-  has_app: boolean;
-  rule: OutreachRule;
-  rule_label: string;
-  step: number | null;
-  template_slug: string;
-  template_title: string;
-  template_id: number;
-  body: string;      // con {nombre} (startSupportChat lo personaliza con la cuenta de la app)
-  preview: string;   // personalizado para el panel
-  reason: string;
-  context: { bono: string | null; sesiones: number | null; caduca: string | null; psicologa: string | null; diag_pagado: string | null; ultimo_envio: string | null; amelia_customer_id: number | null };
-};
-export type OutreachSkipped = { email: string; nombre: string | null; reason: string; rule?: OutreachRule };
-export type OutreachPlan = {
-  ok: boolean;
-  generated_at: string;
-  config: OutreachConfig;
-  amelia_ok: boolean;
-  warnings: string[];
-  counts: Record<string, number>;
-  candidates: OutreachCandidate[];
-  skipped: OutreachSkipped[];
-  skipped_counts: Record<string, number>;
-  missing_templates: string[];
-};
-
 export async function loadAutoTemplates(blog: SupabaseClient): Promise<AutoTemplate[]> {
   const { data, error } = await blog.from("support_message_templates").select("id, slug, title, body, category, sort_order").eq("category", AUTO_TEMPLATE_CATEGORY).order("sort_order");
   if (error) throw new Error("templates: " + error.message);
   return (data ?? []) as AutoTemplate[];
 }
 
-export async function buildOutreachPlan(opts: { app: SupabaseClient; blog: SupabaseClient; nowMs?: number; cfg?: OutreachConfig }): Promise<OutreachPlan> {
-  const { app, blog } = opts;
-  const cfg = opts.cfg ?? OUTREACH_CONFIG;
-  const nowMs = opts.nowMs ?? Date.now();
+// ─── Base común (Amelia + BLOG) ─────────────────────────────────────────────
+
+export type BaseData = {
+  snaps: Map<string, PatientSnapshot>;      // por email
+  byPhone: Map<string, PatientSnapshot[]>;  // por teléfono normalizado
+  ameliaOk: boolean;
+  warnings: string[];
+};
+
+export async function loadBaseSnapshots(opts: { blog: SupabaseClient; nowMs: number; cfg: OutreachConfig }): Promise<BaseData> {
+  const { blog, nowMs, cfg } = opts;
   const warnings: string[] = [];
   const iso = (ms: number) => new Date(ms).toISOString();
 
@@ -321,53 +312,26 @@ export async function buildOutreachPlan(opts: { app: SupabaseClient; blog: Supab
     warnings.push("Amelia no responde: " + (e instanceof Error ? e.message : String(e)) + ". Sin Amelia no se calcula ninguna regla.");
   }
 
-  // 2) BLOG: plantillas, exclusiones, log del motor, 19,99 ofrecida/comprada, pagos.
-  const [templates, optouts, mktUnsub, pdUnsub, logRows, ofrecidos, upsellPaid, payments] = await Promise.all([
-    loadAutoTemplates(blog),
-    fetchAll<{ email: string; reason: string | null }>((a, b) => blog.from("app_outreach_optout").select("email, reason").range(a, b)),
+  // 2) BLOG: exclusiones, log del motor (ambos canales), 19,99 ofrecida/comprada, pagos.
+  const [optouts, mktUnsub, pdUnsub, logRows, ofrecidos, upsellPaid, payments] = await Promise.all([
+    fetchAll<{ email: string | null; phone: string | null; reason: string | null }>((a, b) => blog.from("app_outreach_optout").select("email, phone, reason").range(a, b)),
     fetchAll<{ email: string }>((a, b) => blog.from("marketing_unsubscribes").select("email").range(a, b)),
     fetchAll<{ email: string }>((a, b) => blog.from("post_diag_unsubscribes").select("email").range(a, b)),
-    fetchAll<{ email: string; rule: string; step: number | null; sent_at: string }>((a, b) => blog.from("app_outreach_log").select("email, rule, step, sent_at").eq("ok", true).gte("sent_at", iso(nowMs - cfg.logLookbackDays * DAY)).range(a, b)),
+    fetchAll<{ email: string; phone: string | null; rule: string; step: number | null; sent_at: string; channel: string | null }>((a, b) => blog.from("app_outreach_log").select("email, phone, rule, step, sent_at, channel").eq("ok", true).gte("sent_at", iso(nowMs - cfg.logLookbackDays * DAY)).range(a, b)),
     fetchAll<{ email: string | null; phone_norm: string | null }>((a, b) => blog.from("upsell_ofrecidos").select("email, phone_norm").eq("upsell_key", "sesion_extra").eq("ofrecido", true).range(a, b)),
     fetchAll<{ email: string | null }>((a, b) => blog.from("upsell_paid").select("email").range(a, b)),
     fetchAll<{ patient_email: string | null; patient_phone: string | null; patient_name: string | null; amount_cents: number; created_at: string }>((a, b) => blog.from("payments").select("patient_email, patient_phone, patient_name, amount_cents, created_at").eq("status", "completed").order("created_at", { ascending: false }).range(a, b)),
   ]);
-  const tplBySlug = new Map(templates.map((t) => [t.slug, t]));
 
-  // 3) APP: cuentas, conversaciones y mensajes (último del equipo, último del paciente, exclusiones).
-  const [appUsers, convs, agentMsgs, userMsgs, exclMsgs] = await Promise.all([
-    fetchAll<{ email: string | null; name: string | null; terapia_paid_at: string | null }>((a, b) => app.from("users").select("email, name, terapia_paid_at").range(a, b)),
-    fetchAll<{ id: number; email: string | null; user_id: string | number | null; last_sender: string | null; unread_for_agent: number | null; status: string | null }>((a, b) => app.from("support_conversations").select("id, email, user_id, last_sender, unread_for_agent, status").range(a, b)),
-    fetchAll<{ conversation_id: number; created_at: string }>((a, b) => app.from("support_messages").select("conversation_id, created_at").eq("sender_type", "agent").gte("created_at", iso(nowMs - cfg.cooldownDays * DAY)).range(a, b)),
-    fetchAll<{ conversation_id: number; created_at: string }>((a, b) => app.from("support_messages").select("conversation_id, created_at").eq("sender_type", "user").gte("created_at", iso(nowMs - cfg.remarkDiasMax * DAY)).range(a, b), 1000, 20),
-    fetchAll<{ conversation_id: number; body: string | null }>((a, b) => app.from("support_messages").select("conversation_id, body").eq("sender_type", "user").gte("created_at", iso(nowMs - 365 * DAY)).or(EXCLUSION_OR).range(a, b), 1000, 5),
-  ]);
-  const appByEmail = new Map<string, { name: string | null; terapia_paid_at: string | null }>();
-  for (const r of appUsers) { const e = normEmail(r.email); if (!e) continue; appByEmail.set(e, { name: r.name, terapia_paid_at: r.terapia_paid_at }); }
-  // support_conversations siempre lleva email (también las creadas por user_id).
-  const convEmail = new Map<number, string>();
-  const waiting = new Set<string>();
-  for (const c of convs) {
-    const e = normEmail(c.email);
-    if (!e) continue;
-    convEmail.set(c.id, e);
-    if (c.last_sender === "user" && Number(c.unread_for_agent ?? 0) > 0 && c.status !== "resolved") waiting.add(e);
+  const excludedByEmail = new Map<string, string>(), excludedByPhone = new Map<string, string>();
+  for (const o of optouts) {
+    const why = `no contactar (lista manual${o.reason ? ": " + o.reason : ""})`;
+    const e = normEmail(o.email); if (e) excludedByEmail.set(e, why);
+    const ph = normPhone(o.phone); if (ph.length >= 8) excludedByPhone.set(ph, why);
   }
-  const lastAgent = new Map<string, number>(), lastUser = new Map<string, number>();
-  for (const m of agentMsgs) { const e = convEmail.get(m.conversation_id); if (!e) continue; const ms = Date.parse(m.created_at); if (ms > (lastAgent.get(e) ?? 0)) lastAgent.set(e, ms); }
-  for (const m of userMsgs) { const e = convEmail.get(m.conversation_id); if (!e) continue; const ms = Date.parse(m.created_at); if (ms > (lastUser.get(e) ?? 0)) lastUser.set(e, ms); }
-  const excluded = new Map<string, string>();
-  for (const o of optouts) excluded.set(normEmail(o.email), `no contactar (lista manual${o.reason ? ": " + o.reason : ""})`);
-  for (const r of mktUnsub) { const e = normEmail(r.email); if (e && !excluded.has(e)) excluded.set(e, "se dio de baja de los emails"); }
-  for (const r of pdUnsub) { const e = normEmail(r.email); if (e && !excluded.has(e)) excluded.set(e, "se dio de baja de la secuencia post-diagnóstico"); }
-  for (const m of exclMsgs) {
-    const e = convEmail.get(m.conversation_id);
-    if (!e || excluded.has(e)) continue;
-    const hit = EXCLUSION_PATTERNS.find((x) => x.re.test(m.body ?? ""));
-    if (hit) excluded.set(e, `${hit.label} (mensaje en el chat de la app)`);
-  }
+  for (const r of mktUnsub) { const e = normEmail(r.email); if (e && !excludedByEmail.has(e)) excludedByEmail.set(e, "se dio de baja de los emails"); }
+  for (const r of pdUnsub) { const e = normEmail(r.email); if (e && !excludedByEmail.has(e)) excludedByEmail.set(e, "se dio de baja de la secuencia post-diagnóstico"); }
 
-  // 4) Señales de BLOG por email.
   const offeredEmails = new Set<string>(), offeredPhones = new Set<string>();
   for (const o of ofrecidos) { const e = normEmail(o.email); if (e) offeredEmails.add(e); const ph = normPhone(o.phone_norm); if (ph.length >= 8) offeredPhones.add(ph); }
   for (const r of upsellPaid) { const e = normEmail(r.email); if (e) offeredEmails.add(e); }
@@ -379,31 +343,34 @@ export async function buildOutreachPlan(opts: { app: SupabaseClient; blog: Supab
     else if (r.amount_cents >= 1990 && r.amount_cents <= 2010) offeredEmails.add(e);
     else if (r.amount_cents >= 4000) therapyPaid.add(e);
   }
-  const outreachByEmail = new Map<string, PatientSnapshot["outreach"]>();
+  const logByEmail = new Map<string, OutreachLogEntry[]>(), logByPhone = new Map<string, OutreachLogEntry[]>();
   for (const r of logRows) {
-    const e = normEmail(r.email); if (!e) continue;
     const rule = r.rule as OutreachRule;
     if (!OUTREACH_RULES.includes(rule)) continue;
-    const l = outreachByEmail.get(e) ?? []; l.push({ rule, step: r.step, sentMs: Date.parse(r.sent_at) }); outreachByEmail.set(e, l);
+    const entry: OutreachLogEntry = { rule, step: r.step, sentMs: Date.parse(r.sent_at), channel: r.channel === "wa" ? "wa" : "app" };
+    const e = normEmail(r.email); if (e) { const l = logByEmail.get(e) ?? []; l.push(entry); logByEmail.set(e, l); }
+    const ph = normPhone(r.phone); if (ph.length >= 8) { const l = logByPhone.get(ph) ?? []; l.push(entry); logByPhone.set(ph, l); }
   }
 
-  // 5) Snapshots: clientes con bono (Amelia) ∪ pagos del 9,99 en ventana.
+  // 3) Snapshots: clientes con bono (Amelia) ∪ pagos del 9,99 en ventana.
   const snaps = new Map<string, PatientSnapshot>();
-  const ensure = (email: string, nombre: string | null, phone: string | null): PatientSnapshot => {
+  const ensure = (email: string, nombre: string | null, phoneRaw: string | null): PatientSnapshot => {
     let s = snaps.get(email);
     if (!s) {
-      const a = appByEmail.get(email);
+      const phone = normPhone(phoneRaw);
+      const ph = phone.length >= 8 ? phone : null;
+      const byE = logByEmail.get(email) ?? [], byP = ph ? logByPhone.get(ph) ?? [] : [];
+      const seen = new Set<string>();
+      const outreach = [...byE, ...byP].filter((o) => { const k = `${o.rule}|${o.step}|${o.sentMs}`; if (seen.has(k)) return false; seen.add(k); return true; });
       s = {
-        email, nombre: a?.name?.trim() || nombre, phone, hasApp: !!a,
+        email, nombre, phone: ph, hasApp: false,
         bonos: [], hasAnyBono: tenure.has(email), tenureStartMs: tenure.get(email) || null,
-        offered1999: offeredEmails.has(email) || (phone ? offeredPhones.has(normPhone(phone)) : false),
+        offered1999: offeredEmails.has(email) || (ph ? offeredPhones.has(ph) : false),
         diagPaidMs: diagPaid.get(email) ?? null,
-        hasTherapyPayment: therapyPaid.has(email) || !!a?.terapia_paid_at,
-        outreach: outreachByEmail.get(email) ?? [],
-        lastAgentMsgMs: lastAgent.get(email) ?? null,
-        lastUserMsgMs: lastUser.get(email) ?? null,
-        waitingForAgent: waiting.has(email),
-        excludedReason: excluded.get(email) ?? null,
+        hasTherapyPayment: therapyPaid.has(email),
+        outreach,
+        lastAgentMsgMs: null, lastUserMsgMs: null, waitingForAgent: false,
+        excludedReason: excludedByEmail.get(email) ?? (ph ? excludedByPhone.get(ph) : null) ?? null,
       };
       snaps.set(email, s);
     }
@@ -420,7 +387,7 @@ export async function buildOutreachPlan(opts: { app: SupabaseClient; blog: Supab
     const used = Number(r.used_count ?? 0);
     const nombre = `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim() || null;
     const s = ensure(email, nombre, r.phone);
-    if (!s.offered1999 && r.phone && offeredPhones.has(normPhone(r.phone))) s.offered1999 = true;
+    if (!s.phone) { const ph = normPhone(r.phone); if (ph.length >= 8) s.phone = ph; }
     s.bonos.push({
       customerId: r.customer_id, packageCustomerId: r.package_customer_id, packageName: (r.package_name ?? "bono").trim(),
       total, used, remaining: Math.max(0, total - used),
@@ -433,45 +400,192 @@ export async function buildOutreachPlan(opts: { app: SupabaseClient; blog: Supab
     if (esInterno(email) || nowMs - ms > cfg.remarkDiasMax * DAY) continue;
     ensure(email, payName.get(email) ?? null, payPhone.get(email) ?? null);
   }
+  const byPhone = new Map<string, PatientSnapshot[]>();
+  for (const s of snaps.values()) { if (!s.phone) continue; const l = byPhone.get(s.phone) ?? []; l.push(s); byPhone.set(s.phone, l); }
+  return { snaps, byPhone, ameliaOk, warnings };
+}
 
-  // 6) Decidir.
+// ─── Señales del chat de la app (proyecto APP) ──────────────────────────────
+
+export async function applyAppSignals(opts: { base: BaseData; app: SupabaseClient; nowMs: number; cfg: OutreachConfig }): Promise<void> {
+  const { base, app, nowMs, cfg } = opts;
+  const { snaps } = base;
+  const iso = (ms: number) => new Date(ms).toISOString();
+  const [appUsers, convs, agentMsgs, userMsgs, exclMsgs] = await Promise.all([
+    fetchAll<{ email: string | null; name: string | null; terapia_paid_at: string | null }>((a, b) => app.from("users").select("email, name, terapia_paid_at").range(a, b)),
+    fetchAll<{ id: number; email: string | null; last_sender: string | null; unread_for_agent: number | null; status: string | null }>((a, b) => app.from("support_conversations").select("id, email, last_sender, unread_for_agent, status").range(a, b)),
+    fetchAll<{ conversation_id: number; created_at: string }>((a, b) => app.from("support_messages").select("conversation_id, created_at").eq("sender_type", "agent").gte("created_at", iso(nowMs - cfg.cooldownDays * DAY)).range(a, b)),
+    fetchAll<{ conversation_id: number; created_at: string }>((a, b) => app.from("support_messages").select("conversation_id, created_at").eq("sender_type", "user").gte("created_at", iso(nowMs - cfg.remarkDiasMax * DAY)).range(a, b), 1000, 20),
+    fetchAll<{ conversation_id: number; body: string | null }>((a, b) => app.from("support_messages").select("conversation_id, body").eq("sender_type", "user").gte("created_at", iso(nowMs - 365 * DAY)).or(exclusionOr("body")).range(a, b), 1000, 5),
+  ]);
+  const appByEmail = new Map<string, { name: string | null; terapia_paid_at: string | null }>();
+  for (const r of appUsers) { const e = normEmail(r.email); if (e) appByEmail.set(e, { name: r.name, terapia_paid_at: r.terapia_paid_at }); }
+  // support_conversations siempre lleva email (también las creadas por user_id).
+  const convEmail = new Map<number, string>();
+  const waiting = new Set<string>();
+  for (const c of convs) {
+    const e = normEmail(c.email);
+    if (!e) continue;
+    convEmail.set(c.id, e);
+    if (c.last_sender === "user" && Number(c.unread_for_agent ?? 0) > 0 && c.status !== "resolved") waiting.add(e);
+  }
+  const lastAgent = new Map<string, number>(), lastUser = new Map<string, number>();
+  for (const m of agentMsgs) { const e = convEmail.get(m.conversation_id); if (!e) continue; const ms = Date.parse(m.created_at); if (ms > (lastAgent.get(e) ?? 0)) lastAgent.set(e, ms); }
+  for (const m of userMsgs) { const e = convEmail.get(m.conversation_id); if (!e) continue; const ms = Date.parse(m.created_at); if (ms > (lastUser.get(e) ?? 0)) lastUser.set(e, ms); }
+  const excluded = new Map<string, string>();
+  for (const m of exclMsgs) {
+    const e = convEmail.get(m.conversation_id);
+    if (!e || excluded.has(e)) continue;
+    const hit = EXCLUSION_PATTERNS.find((x) => x.re.test(m.body ?? ""));
+    if (hit) excluded.set(e, `${hit.label} (mensaje en el chat de la app)`);
+  }
+  for (const s of snaps.values()) {
+    const a = appByEmail.get(s.email);
+    if (a) { s.hasApp = true; if (a.name?.trim()) s.nombre = a.name.trim(); if (a.terapia_paid_at) s.hasTherapyPayment = true; }
+    const la = lastAgent.get(s.email); if (la != null && la > (s.lastAgentMsgMs ?? 0)) s.lastAgentMsgMs = la;
+    const lu = lastUser.get(s.email); if (lu != null && lu > (s.lastUserMsgMs ?? 0)) s.lastUserMsgMs = lu;
+    if (waiting.has(s.email)) s.waitingForAgent = true;
+    if (!s.excludedReason && excluded.has(s.email)) s.excludedReason = excluded.get(s.email)!;
+  }
+}
+
+// ─── Señales de WhatsApp (messages_mentesana, por teléfono) ─────────────────
+// full=false (plan de la app): solo lo que hace falta para el cooldown cruzado (mensajes del equipo
+// por WhatsApp en los últimos N días). full=true (plan de WhatsApp): además último mensaje del
+// paciente, pendientes de respuesta, fallos de Meta (opt-out / throttling) y patrones de exclusión.
+export type WaSignals = { throttled: Map<string, number>; metaOptOut: Set<string>; lastOutTemplate: Map<string, { ms: number; name: string | null }> };
+
+export async function applyWaSignals(opts: { base: BaseData; blog: SupabaseClient; nowMs: number; cfg: OutreachConfig; full: boolean }): Promise<WaSignals> {
+  const { base, blog, nowMs, cfg, full } = opts;
+  const { byPhone } = base;
+  const sig: WaSignals = { throttled: new Map(), metaOptOut: new Set(), lastOutTemplate: new Map() };
+  if (byPhone.size === 0) return sig;
+  const sinceOut = naiveIso(nowMs - (full ? cfg.logLookbackDays : cfg.cooldownDays) * DAY);
+  const outbound = await fetchAll<{ phone: string | null; timestamp: string; type: string; is_template: boolean | null; template_name: string | null; status: string | null; error_reason: string | null }>((a, b) =>
+    blog.from("messages_mentesana").select("phone, timestamp, type, is_template, template_name, status, error_reason").neq("type", "received").gte("timestamp", sinceOut).order("timestamp", { ascending: false }).range(a, b), 1000, full ? 40 : 10);
+  const lastAgent = new Map<string, number>();
+  for (const m of outbound) {
+    const ph = normPhone(m.phone); if (ph.length < 8 || !byPhone.has(ph)) continue;
+    const ms = toMs(m.timestamp); if (ms == null) continue;
+    const failed = m.status === "failed";
+    const err = (m.error_reason ?? "").toLowerCase();
+    if (failed && /chosen to stop receiving|stop receiving/.test(err)) sig.metaOptOut.add(ph);
+    if (failed && /healthy ecosystem|spam rate limit/.test(err) && nowMs - ms < 7 * DAY) { if (ms > (sig.throttled.get(ph) ?? 0)) sig.throttled.set(ph, ms); }
+    if (failed) continue; // un fallo no cuenta como contacto
+    if (ms > (lastAgent.get(ph) ?? 0)) lastAgent.set(ph, ms);
+    if (m.is_template && !sig.lastOutTemplate.has(ph)) sig.lastOutTemplate.set(ph, { ms, name: m.template_name });
+  }
+  for (const [ph, ms] of lastAgent) for (const s of byPhone.get(ph) ?? []) if (ms > (s.lastAgentMsgMs ?? 0)) s.lastAgentMsgMs = ms;
+  if (!full) return sig;
+
+  const inbound = await fetchAll<{ phone: string | null; sender: string | null; timestamp: string }>((a, b) =>
+    blog.from("messages_mentesana").select("phone, sender, timestamp").eq("type", "received").gte("timestamp", naiveIso(nowMs - cfg.remarkDiasMax * DAY)).order("timestamp", { ascending: false }).range(a, b), 1000, 40);
+  const lastUser = new Map<string, number>();
+  for (const m of inbound) {
+    const ph = normPhone(m.sender ?? m.phone); if (ph.length < 8 || !byPhone.has(ph)) continue;
+    const ms = toMs(m.timestamp); if (ms == null) continue;
+    if (ms > (lastUser.get(ph) ?? 0)) lastUser.set(ph, ms);
+  }
+  for (const [ph, ms] of lastUser) for (const s of byPhone.get(ph) ?? []) {
+    if (ms > (s.lastUserMsgMs ?? 0)) s.lastUserMsgMs = ms;
+    // Escribió después del último mensaje del equipo → está esperando respuesta: lo lleva el equipo.
+    if (s.lastAgentMsgMs == null || ms > s.lastAgentMsgMs) s.waitingForAgent = true;
+  }
+  const excl = await fetchAll<{ phone: string | null; sender: string | null; content: string | null }>((a, b) =>
+    blog.from("messages_mentesana").select("phone, sender, content").eq("type", "received").gte("timestamp", naiveIso(nowMs - 365 * DAY)).or(exclusionOr("content")).range(a, b), 1000, 5);
+  for (const m of excl) {
+    const ph = normPhone(m.sender ?? m.phone); if (ph.length < 8) continue;
+    const list = byPhone.get(ph); if (!list) continue;
+    const hit = EXCLUSION_PATTERNS.find((x) => x.re.test(m.content ?? ""));
+    if (!hit) continue;
+    for (const s of list) if (!s.excludedReason) s.excludedReason = `${hit.label} (mensaje por WhatsApp)`;
+  }
+  for (const ph of sig.metaOptOut) for (const s of byPhone.get(ph) ?? []) if (!s.excludedReason) s.excludedReason = "bloqueó los mensajes de la empresa en WhatsApp (Meta: stop receiving)";
+  return sig;
+}
+
+// ─── Plan y envío por el chat de la app ─────────────────────────────────────
+
+export type OutreachCandidate = {
+  email: string;
+  nombre: string | null;
+  phone: string | null;
+  has_app: boolean;
+  rule: OutreachRule;
+  rule_label: string;
+  step: number | null;
+  template_slug: string;
+  template_title: string;
+  template_id: number;
+  body: string;      // con {nombre} (startSupportChat lo personaliza con la cuenta de la app)
+  preview: string;   // personalizado para el panel
+  reason: string;
+  context: { bono: string | null; sesiones: number | null; caduca: string | null; psicologa: string | null; diag_pagado: string | null; ultimo_envio: string | null; amelia_customer_id: number | null };
+};
+export type OutreachSkipped = { email: string; nombre: string | null; reason: string; rule?: OutreachRule };
+export type OutreachPlan = {
+  ok: boolean;
+  generated_at: string;
+  config: OutreachConfig;
+  amelia_ok: boolean;
+  warnings: string[];
+  counts: Record<string, number>;
+  candidates: OutreachCandidate[];
+  skipped: OutreachSkipped[];
+  skipped_counts: Record<string, number>;
+  missing_templates: string[];
+};
+
+export const skipKey = (reason: string) => reason.replace(/\d+ días/g, "N días");
+export const lastOutreachLabel = (s: PatientSnapshot): string | null => {
+  const last = [...s.outreach].sort((a, b) => b.sentMs - a.sentMs)[0];
+  return last ? `${RULE_LABEL[last.rule]}${last.step ? " " + last.step : ""} · ${CHANNEL_LABEL[last.channel]} · ${fmtFecha(last.sentMs)}` : null;
+};
+
+export async function buildOutreachPlan(opts: { app: SupabaseClient; blog: SupabaseClient; nowMs?: number; cfg?: OutreachConfig }): Promise<OutreachPlan> {
+  const { app, blog } = opts;
+  const cfg = opts.cfg ?? OUTREACH_CONFIG;
+  const nowMs = opts.nowMs ?? Date.now();
+  const [templates, base] = await Promise.all([loadAutoTemplates(blog), loadBaseSnapshots({ blog, nowMs, cfg })]);
+  const warnings = [...base.warnings];
+  const tplBySlug = new Map(templates.map((t) => [t.slug, t]));
+  if (base.ameliaOk) {
+    await applyAppSignals({ base, app, nowMs, cfg });
+    try { await applyWaSignals({ base, blog, nowMs, cfg, full: false }); } catch (e) { warnings.push("WhatsApp (cooldown cruzado) no disponible: " + (e instanceof Error ? e.message : String(e))); }
+  }
+
   const candidates: OutreachCandidate[] = [];
   const skipped: OutreachSkipped[] = [];
   const counts: Record<string, number> = {};
   const skippedCounts: Record<string, number> = {};
   const missing = new Set<string>();
-  if (ameliaOk) {
-    for (const s of snaps.values()) {
-      const d = decideRule(s, nowMs, cfg);
-      if (!isDecision(d)) { skipped.push({ email: s.email, nombre: s.nombre, reason: d.skip, rule: d.rule }); skippedCounts[d.skip.replace(/\d+ días/, "N días")] = (skippedCounts[d.skip.replace(/\d+ días/, "N días")] ?? 0) + 1; continue; }
+  if (base.ameliaOk) {
+    for (const s of base.snaps.values()) {
+      const d = decideRule(s, nowMs, cfg, "app");
+      if (!isDecision(d)) { skipped.push({ email: s.email, nombre: s.nombre, reason: d.skip, rule: d.rule }); skippedCounts[skipKey(d.skip)] = (skippedCounts[skipKey(d.skip)] ?? 0) + 1; continue; }
       const tpl = tplBySlug.get(d.templateSlug);
       if (!tpl) { missing.add(d.templateSlug); skipped.push({ email: s.email, nombre: s.nombre, reason: `falta la plantilla ${d.templateSlug}`, rule: d.rule }); continue; }
       const body = renderVars(tpl.body, d.vars);
       const first = s.nombre?.split(/\s+/)[0] ?? null;
-      const lastOut = s.outreach.sort((a, b) => b.sentMs - a.sentMs)[0];
       candidates.push({
-        email: s.email, nombre: s.nombre, has_app: s.hasApp,
+        email: s.email, nombre: s.nombre, phone: s.phone, has_app: s.hasApp,
         rule: d.rule, rule_label: RULE_LABEL[d.rule], step: d.step,
         template_slug: tpl.slug, template_title: tpl.title, template_id: tpl.id,
         body, preview: personalize(body, first), reason: d.reason,
         context: {
           bono: d.bono?.packageName ?? null, sesiones: d.bono ? d.bono.remaining : null, caduca: d.bono?.endMs ? fmtFecha(d.bono.endMs) : null,
           psicologa: d.bono?.providerName || null, diag_pagado: s.diagPaidMs ? fmtFecha(s.diagPaidMs) : null,
-          ultimo_envio: lastOut ? `${RULE_LABEL[lastOut.rule]}${lastOut.step ? " " + lastOut.step : ""} · ${fmtFecha(lastOut.sentMs)}` : null,
-          amelia_customer_id: d.bono?.customerId ?? null,
+          ultimo_envio: lastOutreachLabel(s), amelia_customer_id: d.bono?.customerId ?? null,
         },
       });
       counts[d.rule] = (counts[d.rule] ?? 0) + 1;
     }
   }
-  const order: Record<OutreachRule, number> = { psi_baja: 0, renovacion: 1, caducidad: 2, bono_vencido: 3, saludo_1999: 4, remark: 5 };
-  candidates.sort((a, b) => order[a.rule] - order[b.rule] || (a.step ?? 0) - (b.step ?? 0) || a.email.localeCompare(b.email));
+  candidates.sort((a, b) => RULE_ORDER[a.rule] - RULE_ORDER[b.rule] || (a.step ?? 0) - (b.step ?? 0) || a.email.localeCompare(b.email));
   if (missing.size) warnings.push(`Faltan plantillas en support_message_templates: ${[...missing].join(", ")}`);
 
-  return { ok: true, generated_at: new Date(nowMs).toISOString(), config: cfg, amelia_ok: ameliaOk, warnings, counts, candidates, skipped, skipped_counts: skippedCounts, missing_templates: [...missing] };
+  return { ok: true, generated_at: new Date(nowMs).toISOString(), config: cfg, amelia_ok: base.ameliaOk, warnings, counts, candidates, skipped, skipped_counts: skippedCounts, missing_templates: [...missing] };
 }
-
-// ─── Envío ──────────────────────────────────────────────────────────────────
 
 export type OutreachResult = { email: string; rule: OutreachRule; step: number | null; ok: boolean; conversation_id?: number; reused?: boolean; user_found?: boolean; push_sent?: number; email_sent?: boolean; error?: string };
 
@@ -503,7 +617,7 @@ export async function runOutreach(opts: { candidates: OutreachCandidate[]; agent
   const agentName = agent?.name?.trim() || agent?.email || (opts.source === "cron" ? "cron" : null);
   if (results.length) {
     const rows = results.map((r, i) => ({
-      email: r.email, amelia_customer_id: candidates[i].context.amelia_customer_id, rule: r.rule, step: r.step,
+      email: r.email, phone: candidates[i].phone, channel: "app", amelia_customer_id: candidates[i].context.amelia_customer_id, rule: r.rule, step: r.step,
       template_slug: candidates[i].template_slug, template_title: candidates[i].template_title, body: candidates[i].body,
       batch_id: batchId, conversation_id: r.conversation_id ?? null, ok: r.ok, error: r.ok ? null : (r.error ?? "error"),
       agent_email: agentEmail, agent_name: agentName, source: opts.source,
