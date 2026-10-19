@@ -20,6 +20,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AgentProfile } from "@/lib/agent-auth";
 import { ameliaQuery, ameliaTable } from "@/lib/amelia-db";
+import { EXCLUDED_PATIENT_EMAILS, dropExcludedPatients } from "@/lib/excluded-patients";
 import { EMAIL_RE, personalize, startSupportChat } from "@/lib/support-start-chat";
 
 const DAY = 86_400_000;
@@ -307,6 +308,7 @@ export async function loadBaseSnapshots(opts: { blog: SupabaseClient; nowMs: num
        WHERE p.status = 'approved' AND u.email IS NOT NULL AND u.email <> '' GROUP BY LOWER(u.email)`,
     );
     for (const r of t) { const ms = toMs(r.first_start); const e = normEmail(r.email); if (e) tenure.set(e, ms ?? 0); }
+    bonoRows = dropExcludedPatients(bonoRows);
     ameliaOk = true;
   } catch (e) {
     warnings.push("Amelia no responde: " + (e instanceof Error ? e.message : String(e)) + ". Sin Amelia no se calcula ninguna regla.");
@@ -401,6 +403,7 @@ export async function loadBaseSnapshots(opts: { blog: SupabaseClient; nowMs: num
     ensure(email, payName.get(email) ?? null, payPhone.get(email) ?? null);
   }
   const byPhone = new Map<string, PatientSnapshot[]>();
+  for (const e of EXCLUDED_PATIENT_EMAILS) snaps.delete(e); // nunca en plantillas automáticas (app ni WhatsApp)
   for (const s of snaps.values()) { if (!s.phone) continue; const l = byPhone.get(s.phone) ?? []; l.push(s); byPhone.set(s.phone, l); }
   return { snaps, byPhone, ameliaOk, warnings };
 }
