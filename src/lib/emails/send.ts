@@ -20,12 +20,13 @@ interface SendEmailOptions {
   replyTo?: string;
   attachments?: Attachment[];
   tags?: string[];
+  idempotencyKey?: string;
 }
 
 const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "hola@mentesanapsicologia.com";
 const SENDER_NAME = process.env.BREVO_SENDER_NAME || "Mente Sana Psicología";
 
-export async function sendEmail({ to, subject, html, toName, fromName, replyTo, attachments, tags }: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
+export async function sendEmail({ to, subject, html, toName, fromName, replyTo, attachments, tags, idempotencyKey }: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
     console.warn("[email] BREVO_API_KEY not set — skipping send");
@@ -44,6 +45,7 @@ export async function sendEmail({ to, subject, html, toName, fromName, replyTo, 
         sender: { email: SENDER_EMAIL, name: fromName?.trim() ? `${fromName.trim()} · Mente Sana` : SENDER_NAME },
         to: [{ email: to, name: toName || to }],
         subject,
+        headers: idempotencyKey ? { idempotencyKey } : undefined,
         tags: tags?.length ? tags : undefined,
         htmlContent: html,
         replyTo: replyTo ? { email: replyTo } : undefined,
@@ -53,6 +55,7 @@ export async function sendEmail({ to, subject, html, toName, fromName, replyTo, 
 
     if (!res.ok) {
       const errText = await res.text();
+      if (idempotencyKey && errText.includes('"duplicate_parameter"')) return { success: true };
       console.error("[email] Brevo error:", res.status, errText);
       return { success: false, error: `Brevo ${res.status}: ${errText}` };
     }
