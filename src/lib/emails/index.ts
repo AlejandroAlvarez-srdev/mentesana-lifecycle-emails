@@ -3,6 +3,7 @@ export { welcomeNewsletterEmail } from "./welcome-newsletter";
 export { paymentConfirmationEmail } from "./payment-confirmation";
 export { diagnosticoPaidEmail } from "./diagnostico-paid";
 export { diagnosticoSlotTakenEmail } from "./diagnostico-slot-taken";
+export { logopediaPaidEmail } from "./logopedia-paid";
 export { diagnosticoTestReminderEmail } from "./diagnostico-test-reminder";
 export { contactReceivedEmail } from "./contact-received";
 export { sessionReminderEmail } from "./session-reminder";
