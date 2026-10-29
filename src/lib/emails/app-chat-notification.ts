@@ -8,7 +8,7 @@ function redirectUrl(conversationId: string) {
   return `https://mentesanapsicologia.com/app-redirect?to=${to}`;
 }
 
-const PLAY_STORE = "https://play.google.com/store/apps/details?id=com.mentesanapsicologia.app";
+const PLAY_STORE = "https://play.google.com/store/apps/details?id=com.mentesanapsicologia.com";
 const APP_STORE = "https://apps.apple.com/co/app/mente-sana-app/id6769225141";
 
 interface Props {
