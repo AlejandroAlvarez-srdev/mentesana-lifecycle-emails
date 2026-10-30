@@ -1,3 +1,4 @@
+import { productoDesdeSlug } from "@/lib/productos-999";
 import { emailLayout } from "./layout";
 
 interface Props {
@@ -16,15 +17,17 @@ const CREAM = "#FBF7EE";
 export function diagnosticoSlotTakenEmail(props: Props): { subject: string; html: string } {
   const first = (props.name || "").split(/\s+/)[0] || "";
   const greeting = first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : "Hola";
-  const logopedia = props.producto === "logopedia";
-  const psi = props.psychologistName || (logopedia ? "tu logopeda" : "tu psicóloga");
-  const producto = logopedia ? "valoración de logopedia" : "diagnóstico";
-  const sesion = logopedia ? "tu sesión de valoración" : "tu sesión de diagnóstico";
-  const waUrl = logopedia
+  const config = productoDesdeSlug(props.producto);
+  const nutricion = config.slug === "nutricion";
+  const logopedia = config.slug === "logopedia";
+  const psi = props.psychologistName || `tu ${config.pro}`;
+  const producto = nutricion ? "consulta de nutrición" : logopedia ? "valoración de logopedia" : "diagnóstico";
+  const sesion = nutricion ? "tu consulta de nutrición" : logopedia ? "tu sesión de valoración" : "tu sesión de diagnóstico";
+  const waUrl = nutricion ? `https://wa.me/34XXXXXXXXX?text=${encodeURIComponent("Hola, quiero reagendar mi consulta de nutrición")}` : logopedia
     ? "https://wa.me/34XXXXXXXXX?text=Hola%2C%20quiero%20reagendar%20mi%20sesi%C3%B3n%20de%20logopedia"
     : "https://wa.me/34XXXXXXXXX?text=Hola%2C%20quiero%20reagendar%20mi%20diagn%C3%B3stico";
 
-  const subject = logopedia
+  const subject = nutricion ? "Tu consulta de nutrición está pagada — reagendamos tu cita" : logopedia
     ? "Tu valoración de logopedia está pagada — reagendamos tu sesión 🙏"
     : "Tu diagnóstico está pagado — reagendamos tu sesión 🙏";
 
@@ -34,7 +37,7 @@ export function diagnosticoSlotTakenEmail(props: Props): { subject: string; html
       Tu pago llegó <em style="color:${PURPLE};font-style:normal;">perfectamente</em> — pero no quedó confirmado el horario de tu sesión.
     </h1>
     <p style="margin:0 0 14px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.65;color:#1a0a1f;opacity:0.85;">
-      Sentimos el inconveniente. No pudimos confirmar tu hueco con ${psi} al terminar el pago. No te preocupes — <strong>${sesion} sigue garantizada</strong> y la reagendamos contigo enseguida.
+      Sentimos el inconveniente. No pudimos confirmar tu hueco con ${psi} al terminar el pago. No te preocupes — <strong>${sesion} ${nutricion ? "sigue pendiente de agendar" : "sigue garantizada"}</strong> y la reagendamos contigo enseguida.
     </p>
 
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:${CREAM};border:1.5px solid ${PURPLE}33;border-radius:18px;margin:0 0 24px;">
@@ -58,6 +61,7 @@ export function diagnosticoSlotTakenEmail(props: Props): { subject: string; html
   return {
     subject,
     html: emailLayout({
+      ...(nutricion ? { brandLine: "nutrición online · un plan para tu vida", communityLine: "+8.000 pacientes acompañados por Mente Sana" } : {}),
       title: "Tu hueco se ocupó — ayúdanos a reagendar",
       preheader: `${greeting}, otra persona cogió el hueco. Responde y lo movemos contigo.`,
       content,

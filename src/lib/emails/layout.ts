@@ -7,9 +7,11 @@ interface LayoutOptions {
   title: string;
   preheader?: string;
   content: string;
+  brandLine?: string;
+  communityLine?: string;
 }
 
-export function emailLayout({ title, preheader = "", content }: LayoutOptions): string {
+export function emailLayout({ title, preheader = "", content, brandLine = "psicología online · con cariño", communityLine = "150+ psicólogas certificadas · +8.000 pacientes acompañadas" }: LayoutOptions): string {
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -43,7 +45,7 @@ export function emailLayout({ title, preheader = "", content }: LayoutOptions): 
             <a href="https://mentesanapsicologia.com" target="_blank" style="text-decoration:none;display:inline-block;">
               <img src="https://mentesanapsicologia.com/images/logo-email.png" alt="Mente Sana Psicología" width="160" height="37" style="display:block;width:160px;height:37px;border:0;outline:none;text-decoration:none;">
             </a>
-            <p style="margin:8px 0 0;font-family:'Caveat',cursive;font-size:14px;color:#1a0a1f;opacity:0.55;line-height:1;">psicología online · con cariño</p>
+            <p style="margin:8px 0 0;font-family:'Caveat',cursive;font-size:14px;color:#1a0a1f;opacity:0.55;line-height:1;">${brandLine}</p>
             <!-- Línea dorada decorativa -->
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:10px auto 0;">
               <tr>
@@ -65,7 +67,7 @@ export function emailLayout({ title, preheader = "", content }: LayoutOptions): 
           <td style="background:#FFFAF2;padding:32px;text-align:center;border-top:1px solid rgba(0,0,0,0.04);">
             <p style="margin:0 0 8px;font-family:'Caveat',cursive;font-size:22px;color:#6A178C;">Cuida tu mente, cuida tu vida</p>
             <p style="margin:0 0 16px;font-size:13px;color:#6A178C;font-weight:600;">Mente Sana Psicología</p>
-            <p style="margin:0 0 16px;font-size:11px;color:#1a0a1f;opacity:0.5;line-height:1.6;">150+ psicólogas certificadas · +8.000 pacientes acompañadas<br>4.9/5 valoración media · España</p>
+            <p style="margin:0 0 16px;font-size:11px;color:#1a0a1f;opacity:0.5;line-height:1.6;">${communityLine}<br>4.9/5 valoración media · España</p>
             <div style="margin:16px 0;">
               <a href="https://wa.me/34XXXXXXXXX" style="color:#6A178C;text-decoration:none;font-size:11px;margin:0 8px;">WhatsApp</a>
               <span style="color:#6A178C;opacity:0.3;">·</span>
