@@ -7,7 +7,7 @@
 
 **The email, in-app and WhatsApp automation layer behind an online psychology clinic in Spain.** It covers transactional receipts, booking reminders, abandoned-checkout recovery, post-session upsells and bono renewals. Every flow runs on scheduled jobs, every send is logged, and a patient who has asked us to stop never hears from us again.
 
-> Extracted from the private production monorepo of [Mente Sana Psicología](https://mentesanapsicologia.com) (8,000+ patients, 150+ licensed psychologists). The real git history is preserved: 119 commits, April–October 2026. Secrets and personal data are redacted.
+> Extracted from the private production monorepo of [Mente Sana Psicología](https://mentesanapsicologia.com) (8,000+ patients, 150+ licensed psychologists). The real git history is preserved: 121 commits, April–October 2026. Secrets and personal data are redacted.
 
 ---
 
